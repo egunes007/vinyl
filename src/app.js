@@ -1,7 +1,7 @@
 import { albums, filterAlbums } from './data.js';
 const $ = s => document.querySelector(s);
 const cover = a => `<div class="cover ${a.cover}" style="--cover:${a.color}"><span class="cover-artist">${a.artist}</span><strong class="cover-art">${a.mark}</strong><span class="cover-title">${a.album}</span><span class="cover-disclaimer">ÖZGÜN ÖRNEK KAPAK</span></div>`;
-const card = a => `<button class="album-card" data-album="${a.id}" aria-label="${a.artist} — ${a.album}, detayları aç">${cover(a)}<div class="card-info"><span class="card-genre">${a.genre} <span>↗</span></span><h3>${a.album}</h3><p>${a.artist} <span>· ${a.year}</span></p></div></button>`;
+const card = a => `<button class="album-card" data-album="${a.id}" aria-label="${a.artist} — ${a.album}, detayları aç"><div class="cover-wrap">${cover(a)}${a.signed?'<span class="signed-badge">✎ İmzalı · Örnek</span>':''}</div><div class="card-info"><span class="card-genre">${a.genre} <span>↗</span></span><h3>${a.album}</h3><p>${a.artist} <span>· ${a.year}</span></p></div></button>`;
 const genres = [...new Set(albums.map(a=>a.genre))];
 $('#album-count').textContent=albums.length.toString().padStart(2,'0');
 $('#artist-count').textContent=new Set(albums.map(a=>a.artist)).size.toString().padStart(2,'0');
@@ -17,9 +17,30 @@ $('#artist-grid').innerHTML=[...albums].sort((a,b)=>a.artist.localeCompare(b.art
 document.addEventListener('click',e=>{
  const tile=e.target.closest('[data-genre], [data-artist]');if(tile){$('#search').value=tile.dataset.artist||'';$('#genre-filter').value=tile.dataset.genre||'';render();location.hash='collection';}
  const c=e.target.closest('[data-album]');if(!c)return;const a=albums.find(a=>a.id===Number(c.dataset.album));
- $('#album-detail').innerHTML=`${cover(a)}<div class="detail-copy"><p class="eyebrow">ÖRNEK ALBÜM · TASARIM PROTOTİPİ</p><h2>${a.album}</h2><p class="detail-artist">${a.artist}</p><dl>${[['İlk yayın yılı',a.year],['Baskı yılı','Örnek veride belirtilmedi'],['Baskı ülkesi',a.country+' (örnek)'],['Plak şirketi',a.label],['Format','LP · 12 inç (örnek)'],['Tür',a.genre],['Stil',a.style]].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl><p class="muted">Bu kayıt gerçek koleksiyona bağlı değildir. Kapak, albümün resmî görseli yerine kullanılan özgün bir tasarım yer tutucusudur.</p></div>`;
+ $('#album-detail').innerHTML=`${cover(a)}<div class="detail-copy"><p class="eyebrow">ÖRNEK ALBÜM · TASARIM PROTOTİPİ</p><h2>${a.album}</h2><p class="detail-artist">${a.artist}</p><dl>${[['İmza durumu',a.signed?'İmzalı (örnek)':'Belirtilmedi'],['İlk yayın yılı',a.year],['Baskı yılı','Örnek veride belirtilmedi'],['Baskı ülkesi',a.country+' (örnek)'],['Plak şirketi',a.label],['Format','LP · 12 inç (örnek)'],['Tür',a.genre],['Stil',a.style]].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl><p class="muted">Bu kayıt gerçek koleksiyona bağlı değildir. Kapak, albümün resmî görseli yerine kullanılan özgün bir tasarım yer tutucusudur.</p></div>`;
  $('#album-dialog').showModal();
 });
 $('.close').onclick=()=>$('#album-dialog').close();$('#album-dialog').addEventListener('click',e=>{if(e.target===$('#album-dialog'))$('#album-dialog').close();});
 $('.menu').onclick=()=>{const expanded=$('.menu').getAttribute('aria-expanded')!=='true';$('.menu').setAttribute('aria-expanded',expanded);$('nav').classList.toggle('open',expanded);};
 $('nav').addEventListener('click',e=>{if(e.target.closest('a')){$('nav').classList.remove('open');$('.menu').setAttribute('aria-expanded','false');}});
+
+// Yalnızca halka açık imza bayrağı kullanılır; özel Notes metni alınmaz.
+const signedAlbums = albums.filter(a => a.signed === true);
+$('#signed-feature-grid').innerHTML = signedAlbums.slice(0, 4).map(card).join('');
+function renderSigned() {
+ const term = $('#signed-search').value.trim().toLocaleLowerCase('tr-TR');
+ const matches = signedAlbums.filter(a => `${a.artist} ${a.album}`.toLocaleLowerCase('tr-TR').includes(term));
+ $('#signed-grid').innerHTML = matches.length ? matches.map(card).join('') : '<p class="empty">Bu aramaya uygun imzalı plak bulunamadı.</p>';
+ $('#signed-count').textContent = `${matches.length} örnek imzalı plak gösteriliyor`;
+}
+$('#signed-search').addEventListener('input', renderSigned);
+renderSigned();
+function routeSigned(focus = false) {
+ const signed = location.hash === '#signed';
+ document.querySelectorAll('main > section').forEach(section => { section.hidden = signed ? section.id !== 'signed' : section.id === 'signed'; });
+ document.title = signed ? 'İmzalı Plaklar — VINYL ARCHIVE' : 'VINYL ARCHIVE — Müzik, anılar ve plaklar';
+ document.querySelectorAll('nav a').forEach(a => { if (a.getAttribute('href') === location.hash) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+ if (signed && focus) { window.scrollTo(0, 0); $('#signed-title').focus({ preventScroll: true }); }
+}
+window.addEventListener('hashchange', () => routeSigned(true));
+routeSigned();

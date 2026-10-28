@@ -34,3 +34,11 @@ Bu aşamada WordPress, CasaOS, NocoDB, Discogs ve gerçek verilerle entegrasyon 
 - `server.mjs`: yalnızca ön yüz dosyalarını sunan geliştirme sunucusu
 
 Tasarım onayından sonra gerçek veriye ait sunucu tarafı entegrasyon ve WordPress uyarlaması ayrı aşamalarda hazırlanacaktır.
+
+## İmzalı plaklar
+
+Ana sayfadaki İmzalı Plaklar seçkisi ve menüdeki ayrı `#signed` sayfası, `signed: true` bayrağı taşıyan örnek kayıtları gösterir. Sayfa sanatçı/albüm araması, sonuç sayısı ve boş sonuç durumu içerir. Kartlarda ve detaylarda imza bilgisi belirtilir. İki örnek kaydın imza bilgisi tamamen temsilîdir.
+
+NocoDB entegrasyonu henüz yoktur. İleride `Notes` alanındaki imza işareti sunucu tarafında değerlendirilerek yalnızca `signed` bilgisi aktarılmalıdır. Özel not metni tarayıcıya gönderilmemelidir. Gerçek notların biçimi ve olumsuz ifadeler (örneğin “imzalı değil”) entegrasyon aşamasında kontrol edilmelidir.
+
+Kaynakları değiştirdikten sonra `node scripts/build-preview.mjs` komutuyla çift tıklanarak açılan `ONIZLEME.html` kopyasını güncelleyin.

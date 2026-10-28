@@ -1,0 +1,9 @@
+import { readFile, writeFile } from 'node:fs/promises';
+const root = new URL('../', import.meta.url);
+const read = path => readFile(new URL(path, root), 'utf8');
+const html = await read('index.html');
+const css = await read('src/style.css');
+const data = (await read('src/data.js')).replaceAll('export ', '');
+const app = (await read('src/app.js')).replace("import { albums, filterAlbums } from './data.js';", '');
+await writeFile(new URL('ONIZLEME.html', root), html.replace('<link rel="stylesheet" href="/src/style.css">', () => `<style>${css}</style>`).replace('<script type="module" src="/src/app.js"></script>', () => `<script>${data}\n${app}</script>`));
+console.log('ONIZLEME.html güncellendi.');
