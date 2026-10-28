@@ -42,3 +42,7 @@ Ana sayfadaki İmzalı Plaklar seçkisi ve menüdeki ayrı `#signed` sayfası, `
 NocoDB entegrasyonu henüz yoktur. İleride `Notes` alanındaki imza işareti sunucu tarafında değerlendirilerek yalnızca `signed` bilgisi aktarılmalıdır. Özel not metni tarayıcıya gönderilmemelidir. Gerçek notların biçimi ve olumsuz ifadeler (örneğin “imzalı değil”) entegrasyon aşamasında kontrol edilmelidir.
 
 Kaynakları değiştirdikten sonra `node scripts/build-preview.mjs` komutuyla çift tıklanarak açılan `ONIZLEME.html` kopyasını güncelleyin.
+
+## WordPress teması
+
+Kurulabilir tema paketi: `wordpress/vinyl-archive-theme.zip`. Kurulum, gerekli sayfa adresleri ve test sınırları için [WordPress yönergeleri](wordpress/README.md) dosyasını okuyun. Eski pikap çizimi ve imzalı plaklar bölümü korunur. Tema şimdilik örnek verilerle çalışır; WordPress ve CasaOS bu ortamda kurulmamıştır.
