@@ -20,10 +20,11 @@ app = app.replace("import { albums, filterAlbums } from './data.js';", `import {
 const payloadNode = document.getElementById('vinyl-collection-data');
 const payload = payloadNode ? JSON.parse(payloadNode.textContent) : null;
 const live = payload?.live === true;
+${await readFile(new URL('scripts/wordpress-discogs-ui.js', root), 'utf8')}
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const albums = (live ? payload.albums : demoAlbums).map((row, index) => {
  const a = Object.fromEntries(Object.entries(row).map(([k,v]) => [k, typeof v === 'string' ? escapeHTML(v) : v]));
- return {...a, id:index, cover:live?'public-cover':a.cover, color:live?'#292523':a.color, mark:live?'◉':a.mark, genre:a.genre || 'Diğer'};
+ return {...a, id:index, coverImage:live?safeDiscogsImage(row.coverImage):'', discogsUrl:live && /^[1-9][0-9]{0,11}$/.test(String(row.discogsId))?'https://www.discogs.com/release/'+row.discogsId:'', cover:live?'public-cover':a.cover, color:live?'#292523':a.color, mark:live?'◉':a.mark, genre:a.genre || 'Diğer'};
 });
 const filterAlbums = (query='', genre='') => {
  const term=escapeHTML(query.trim().toLocaleLowerCase('tr-TR'));
@@ -45,6 +46,11 @@ app = app.replace('${matches.length} örnek imzalı plak', "${matches.length}${l
 app = app.replace("$('#artist-grid').innerHTML=[...albums]", "$('#artist-grid').innerHTML=[...new Map(albums.map(a=>[a.artist,a])).values()]");
 app = app.replace('${albums.filter(a=>a.genre===g).length} örnek plak', "${albums.filter(a=>a.genre===g).length}${live ? '' : ' örnek'} plak");
 app = app.replace('1 plak ↗', '${albums.filter(record=>record.artist===a.artist).length} plak ↗');
+app = app.replace('const cover = a => `', 'const cover = a => discogsCover(a) || `');
+app = app.replace('const card = a => `<button', 'const card = a => `<article class="album-entry"><button');
+app = app.replace('</div></button>`;\nconst genres', '</div></button>${a.discogsUrl ? \'<a class="discogs-credit" href="\'+a.discogsUrl+\'" target="_blank" rel="noopener noreferrer">Discogs ↗</a>\' : \'\'}</article>`;\nconst genres');
+app = app.replace('</p></div>`;\n $(\'#album-dialog\')', '</p>${a.discogsUrl ? \'<a class="discogs-credit" href="\'+a.discogsUrl+\'" target="_blank" rel="noopener noreferrer">Albüm ve kapak kaynağı: Discogs ↗</a>\' : \'\'}</div>`;\n $(\'#album-dialog\')');
+app = app.replace('Koleksiyon kaydı NocoDB üzerinden alınmıştır. Görsel, kapak bulunmadığında kullanılan yer tutucudur.', 'Koleksiyon kaydı NocoDB üzerinden alınmıştır. Kapaklar Discogs kaynaklıdır; kapak bulunamadığında yer tutucu gösterilir.');
 const start=app.indexOf('function routeSigned(');
 app=app.slice(0,start)+`
 const view = document.body.dataset.archiveView || 'home';
@@ -59,6 +65,16 @@ const requestedGenre = params.get('genre');
 if (requestedGenre && genres.includes(escapeHTML(requestedGenre))) $('#genre-filter').value = requestedGenre;
 render();
 document.querySelectorAll('nav a').forEach(a => {if(new URL(a.href).pathname===location.pathname)a.setAttribute('aria-current','page');});
+document.addEventListener('error', event => {
+ const image = event.target;
+ if (!(image instanceof HTMLImageElement) || !image.hasAttribute('data-cover-id')) return;
+ const album = albums.find(a=>a.id === Number(image.dataset.coverId));
+ if (!album) return;
+ album.coverImage='';
+ // Update every visible instance (featured, collection and modal) without retry loops.
+ document.querySelectorAll('img[data-cover-id="'+album.id+'"]').forEach(img=>{const wrapper=img.closest('.photo-cover');if(wrapper)wrapper.outerHTML=cover(album);});
+}, true);
+
 if(live) {
  $('.demo').textContent = payload.error ? 'Koleksiyon şu anda yüklenemiyor. Lütfen daha sonra tekrar deneyin.' : 'KİŞİSEL PLAK KOLEKSİYONU · VINYL ARCHIVE';
  const labels = ['#signed-feature > p.muted', '#signed > p.muted', '#collection .section-heading > .muted'];

@@ -2,18 +2,31 @@
 // Standalone WordPress HTTP/cache harness; no real credentials or network calls.
 define('ABSPATH', __DIR__);
 define('MINUTE_IN_SECONDS', 60);
+define('HOUR_IN_SECONDS',3600);
 class WP_Error {
     public function __construct(public $code, public $message) {}
+    public function get_error_code() {return $this->code;}
     public function get_error_message() {return $this->message;}
 }
 function add_action(...$args) {}
+function add_filter(...$args) {}
+function register_deactivation_hook(...$args) {}
 function wp_parse_args($args, $defaults) {return array_merge($defaults, $args);}
 function get_option($key, $default = null) {return $GLOBALS['options'][$key] ?? $default;}
+function wp_parse_url($url) {return parse_url($url);}
+function update_option($key,$value,$autoload=false) {$GLOBALS['options'][$key]=$value;}
+function add_option($key,$value,$deprecated='', $autoload=false) {if(isset($GLOBALS['options'][$key]))return false;$GLOBALS['options'][$key]=$value;return true;}
+function delete_option($key) {unset($GLOBALS['options'][$key]);}
+function wp_remote_retrieve_header($r,$key) {return $r['headers'][$key] ?? '';}
 function get_transient($key) {return $GLOBALS['cache'] ?? false;}
 function set_transient($key,$value,$ttl) {$GLOBALS['cache']=$value;}
 function is_wp_error($value) {return $value instanceof WP_Error;}
 function wp_remote_get($url,$args) {
-    check($args['headers']['xc-token']==='test-only-token', 'server header');
+    if (str_starts_with($url,'https://api.discogs.com/')) {
+        check($args['headers']['Authorization']==='Discogs token=discogs-test-only', 'Discogs auth on server');
+        check(!isset($args['headers']['xc-token']), 'no NocoDB token to Discogs');
+        check($args['user-agent']!=='','Discogs user agent');
+    } else check($args['headers']['xc-token']==='test-only-token', 'server header');
     check($args['redirection']===0, 'no token forwarding redirects');
     check($args['sslverify']===true, 'TLS verification');
     $GLOBALS['requests'][]=$url;

@@ -40,3 +40,10 @@ Bu bulut ortamında PHP/WordPress çalışma zamanı olmadığı için WordPress
 Güncel tema 0.3.0 ile birlikte `vinyl-nocodb-plugin.zip` dosyasını Eklentiler bölümünden yükleyin. Adım adım kurulum, token saklama, ağ ve gizlilik bilgileri [eklenti yönergelerinde](vinyl-nocodb/README.txt) bulunur. Eklenti etkinleştirildiğinde tema örnek verileri kullanmaz. Tema tek başına örnek modunu korur. Yukarıdaki ilk prototip açıklamalarından farklı olarak bu güncel sürüm NocoDB bağlantısını destekler; gerçek ev sunucusu bağlantısı kullanıcı panelinde doğrulanmalıdır.
 
 Geliştirme kontrolleri: `php tests/nocodb.php` (WordPress HTTP/önbellek taklitleri), `node tests/live-theme.mjs` (geçici `/tmp/vinyl-browser` dizinine jsdom kurulumu gerekir). PHP 8.4 ile PHP dosyalarının sözdizimi ve bağlantı testleri çalıştırıldı; gerçek WordPress üzerinde kurulum henüz denenmedi.
+
+
+## Discogs kapak eşleştirmesi
+
+Tema **0.4.0** ve eklenti **1.1.0** paketlerini birlikte güncelleyin. Ardından **Ayarlar → Vinyl Discogs** bölümüne Discogs hesabınızdan aldığınız ayrı kişisel API token'ı girip eşleştirmeyi etkinleştirin ve **Kapakları eşleştir / devam et** düğmesine basın. Detaylı kurulum, yenileme, kullanım hakkı ve test sınırları [eklenti yönergelerinde](vinyl-nocodb/README.txt) bulunur. NocoDB verileri değişmez.
+
+`php tests/discogs.php`: Discogs API taklitleriyle token izolasyonu, URL izin listesi, görsel seçimi, önbellek, 404/429/403 ve bozuk yanıt kontrolleri. `node tests/live-theme.mjs`: kart ve detay görselleri, kaynak bağlantıları, bozuk görsel geri dönüşü. Canlı Discogs ve WordPress cron doğrulaması kullanıcı sunucusunda yapılmalıdır.

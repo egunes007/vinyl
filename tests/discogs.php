@@ -1,0 +1,37 @@
+<?php
+require __DIR__.'/nocodb.php';
+function dc_reset() {
+    $GLOBALS['options']['va_dc_enabled']=true;
+    $GLOBALS['options']['va_dc_token']='discogs-test-only';
+    unset($GLOBALS['options']['va_dc_wait_until'], $GLOBALS['options']['va_dc_request_lock']);
+}
+foreach (['0','-1','12/34','https://example.test/123','[m123]','1e5','<script>',''] as $id) check(va_dc_id($id)==='', 'invalid ID: '.$id);
+check(va_dc_id(123)==='123','numeric release id');
+check(va_nc_public_record(['Artist'=>'A','Album'=>'B','Discogs_ID'=>123],0)['discogsId']==='123','NocoDB public ID mapping');
+foreach (['http://i.discogs.com/a.jpg','https://evil.test/a.jpg','https://i.discogs.com.evil.test/a.jpg','https://user:pass@i.discogs.com/a.jpg','https://i.discogs.com:443/a.jpg','javascript:alert(1)'] as $url) check(va_dc_image_url($url)==='','reject untrusted image URL');
+dc_reset();
+$GLOBALS['responses']=[['status'=>200,'body'=>['id'=>123,'images'=>[['type'=>'secondary','uri'=>'https://i.discogs.com/secondary.jpg'],['type'=>'primary','uri'=>'https://i.discogs.com/primary.jpg']]],'headers'=>['x-discogs-ratelimit-remaining'=>'50']]];
+$r=va_dc_fetch_cover('123');check($r['found']===true,'found cover');
+check(!isset($GLOBALS['options']['va_dc_request_lock']),'lock released');
+$enriched=va_dc_enrich([['discogsId'=>'123']]);
+check($enriched[0]['coverImage']==='https://i.discogs.com/primary.jpg','prefer primary cover');
+check($enriched[0]['discogsUrl']==='https://www.discogs.com/release/123','source link');
+check(!str_contains(json_encode($enriched),'discogs-test-only'),'no token in public payload');
+check(va_dc_fetch_cover('124')->get_error_code()==='throttle','requests spaced');
+$GLOBALS['options']['va_dc_covers']['123']['expires']=time()-1;
+check(va_dc_enrich([['discogsId'=>'123']])[0]['coverImage']==='','expired URL not shown');
+$GLOBALS['options']['va_dc_enabled']=false;
+check(va_dc_enrich([['discogsId'=>'123']])[0]['coverImage']==='','disabled no covers');
+dc_reset();$GLOBALS['responses']=[['status'=>404,'body'=>[]]];
+check(va_dc_fetch_cover('124')['found']===false,'missing release cached without image');
+check($GLOBALS['options']['va_dc_covers']['124']['refresh']>time(),'negative caching');
+dc_reset();$GLOBALS['responses']=[['status'=>429,'body'=>[],'headers'=>['retry-after'=>'75']]];
+check(va_dc_fetch_cover('125')->get_error_code()==='throttle','rate limit');
+check($GLOBALS['options']['va_dc_wait_until']>=time()+74,'retry-after honored');
+dc_reset();$GLOBALS['responses']=[['status'=>200,'body'=>['id'=>999,'images'=>[]]]];
+check(is_wp_error(va_dc_fetch_cover('125')),'mismatched release rejected');
+check(!isset($GLOBALS['options']['va_dc_covers']['125']),'no invalid response cached');
+dc_reset();$GLOBALS['responses']=[['status'=>403,'body'=>['secret'=>'not public']]];
+check(va_dc_fetch_cover('125')->get_error_code()==='auth','auth failure');
+check(!str_contains(json_encode(va_dc_enrich([['discogsId'=>'125']])),'not public'),'remote error not leaked');
+echo "PASS: Discogs auth isolation, release IDs, URL allowlist, primary cover, attribution, expiry, disabled mode, missing covers, request pacing, 429, malformed response, auth failure\n";

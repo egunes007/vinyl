@@ -23,6 +23,7 @@ function va_nc_public_record($row, $fallback) {
         'country'=>va_nc_text($row['Pressing_Country'] ?? ''), 'label'=>va_nc_text($row['Label'] ?? ''),
         'genre'=>va_nc_text($row['Genre'] ?? ''), 'style'=>va_nc_text($row['Style'] ?? ''),
         'format'=>va_nc_text($row['Format'] ?? ''), 'signed'=>va_nc_signed($row['Notes'] ?? ''),
-        'featured'=>va_nc_true($row['Featured'] ?? false)
+        'featured'=>va_nc_true($row['Featured'] ?? false),
+        'discogsId'=>va_dc_id($row['Discogs_ID'] ?? '')
     );
 }

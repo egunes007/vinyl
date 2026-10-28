@@ -9,10 +9,10 @@ function vinyl_archive_setup() {
 add_action('after_setup_theme', 'vinyl_archive_setup');
 function vinyl_archive_assets() {
     $uri = get_template_directory_uri();
-    wp_enqueue_style('vinyl-archive', $uri . '/assets/archive.css', array(), '0.3.0');
-    wp_enqueue_style('vinyl-wordpress', $uri . '/assets/wordpress.css', array('vinyl-archive'), '0.3.0');
+    wp_enqueue_style('vinyl-archive', $uri . '/assets/archive.css', array(), '0.4.0');
+    wp_enqueue_style('vinyl-wordpress', $uri . '/assets/wordpress.css', array('vinyl-archive'), '0.4.0');
     if (vinyl_archive_view() !== 'content') {
-        wp_enqueue_script_module('vinyl-archive', $uri . '/assets/app.js', array(), '0.3.0');
+        wp_enqueue_script_module('vinyl-archive', $uri . '/assets/app.js', array(), '0.4.0');
     }
 }
 add_action('wp_enqueue_scripts', 'vinyl_archive_assets');
@@ -29,6 +29,7 @@ function vinyl_archive_view() {
 add_action('wp_head', function () {
     if (vinyl_archive_view() === 'content' || !function_exists('va_nc_fetch')) return;
     $result = va_nc_fetch();
+    if (!is_wp_error($result) && function_exists('va_dc_enrich')) $result = va_dc_enrich($result);
     $payload = is_wp_error($result)
         ? array('live'=>true, 'albums'=>array(), 'error'=>true)
         : array('live'=>true, 'albums'=>$result, 'error'=>false);

@@ -36,3 +36,18 @@ const signed=render(rows,false,'signed');assert.equal(signed.window.document.que
 const empty=render([],true);assert.match(empty.window.document.querySelector('#collection-grid').textContent,/kullanılamıyor/);
 assert.equal(empty.window.document.querySelectorAll('.album-card').length,0);
 console.log('PASS: live cards, XSS text escaping, ampersand search/genre, artist counts, modal, signed page, failure without demo fallback');
+const coveredRows=[{...rows[0],discogsId:'123',coverImage:'https://i.discogs.com/cover.jpg'},{...rows[1],discogsId:'456',coverImage:'https://evil.test/untrusted.jpg'}];
+const covered=render(coveredRows), cd=covered.window.document;
+const image=cd.querySelector('#collection-grid img');
+assert.equal(image.getAttribute('src'),'https://i.discogs.com/cover.jpg');
+assert.equal(image.getAttribute('loading'),'lazy');
+assert.equal(image.getAttribute('referrerpolicy'),'no-referrer');
+assert.equal(cd.querySelectorAll('#collection-grid img').length,1);
+assert.equal(cd.querySelector('#collection-grid .discogs-credit').href,'https://www.discogs.com/release/123');
+assert.equal(cd.querySelectorAll('button a').length,0);
+cd.querySelector('#collection-grid .album-card').click();
+assert.equal(cd.querySelector('#album-detail img').getAttribute('src'),'https://i.discogs.com/cover.jpg');
+image.dispatchEvent(new covered.window.Event('error'));
+assert.equal(cd.querySelectorAll('img[data-cover-id="0"]').length,0);
+assert.ok(cd.querySelector('#album-detail .public-cover'));
+console.log('PASS: Discogs gallery/detail covers, lazy loading, source links, untrusted host rejection, broken-image fallback');
