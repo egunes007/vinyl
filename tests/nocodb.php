@@ -49,6 +49,17 @@ foreach ([['status'=>401,'body'=>['secret'=>'never show']],['status'=>200,'body'
 }
 $GLOBALS['responses']=[new WP_Error('transport','private network details')];
 check(va_nc_fetch(true)->get_error_message()==='NocoDB bağlantısı kurulamadı. Adresi, portu ve Docker ağını kontrol edin.','network errors redacted');
+// Regression: 316 populated records + 616 empty imported rows must count as 316.
+$fixture=[];
+for ($i=1;$i<=932;$i++) $fixture[]= $i<=316 ? array_merge($row,['Id'=>$i]) : ['Id'=>$i,'Artist'=>null,'Album'=>'  '];
+$GLOBALS['cache']=false;$GLOBALS['responses']=[];
+foreach (array_chunk($fixture,100) as $chunk) $GLOBALS['responses'][]=['status'=>200,'body'=>['list'=>$chunk]];
+check(count(va_nc_fetch(true))===316,'316 records plus 616 blank rows');
+check(va_nc_public_record(['Artist'=>'','Album'=>'Only album'],0)!==null,'preserve partial record');
+check(va_nc_public_record(['Artist'=>'Only artist','Album'=>''],0)!==null,'preserve partial artist');
+$GLOBALS['cache']=false;
+$GLOBALS['responses']=[['status'=>200,'body'=>['list'=>[array_merge($row,['Id'=>1]),array_merge($row,['Id'=>1]),array_merge($row,['Id'=>2])]]]];
+check(count(va_nc_fetch(true))===2,'same API ID deduped, distinct pressings retained');
 $GLOBALS['options']=[];
 check(is_wp_error(va_nc_fetch(true)),'missing token');
-echo "PASS: field allowlist, visibility, signatures, pagination, caching, HTTP/schema/network failures, missing credentials\n";
+echo "PASS: field allowlist, visibility, signatures, pagination, caching, HTTP/schema/network failures, missing credentials, blank rows and duplicate API IDs\n";

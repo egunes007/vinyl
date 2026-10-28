@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Vinyl Archive — NocoDB
  * Description: NocoDB v2 koleksiyonunu salt okunur biçimde VINYL ARCHIVE temasına bağlar.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Requires at least: 6.5
  * Requires PHP: 8.1
  */
@@ -14,12 +14,13 @@ function va_nc_settings() {
 function va_nc_token() {
     return defined('VINYL_NOCODB_TOKEN') ? VINYL_NOCODB_TOKEN : get_option('va_nc_token', '');
 }
-function va_nc_key() { return 'va_nc_collection_v1'; }
+function va_nc_key() { return 'va_nc_collection_v2'; }
 function va_nc_fetch($refresh = false) {
     if (!$refresh) { $cached = get_transient(va_nc_key()); if (is_array($cached)) return $cached; }
     $settings = va_nc_settings();
     if (!va_nc_token()) return new WP_Error('missing_token', 'API token henüz tanımlanmadı.');
     $public = array();
+    $seen = array();
     for ($offset = 0; $offset < 10000; $offset += 100) {
         $url = $settings['url'] . '/api/v2/tables/' . rawurlencode($settings['table']) . '/records?limit=100&offset=' . $offset;
         $response = wp_remote_get($url, array('timeout'=>15, 'redirection'=>0, 'sslverify'=>true, 'limit_response_size'=>4 * 1024 * 1024, 'headers'=>array('xc-token'=>va_nc_token(), 'Accept'=>'application/json')));
@@ -30,7 +31,14 @@ function va_nc_fetch($refresh = false) {
         if (!is_array($body) || !isset($body['list']) || !is_array($body['list']) || !array_is_list($body['list'])) return new WP_Error('schema', 'NocoDB v2 liste yanıtı beklenen biçimde değil.');
         foreach ($body['list'] as $row) {
             if (!is_array($row) || !array_key_exists('Artist', $row) || !array_key_exists('Album', $row)) return new WP_Error('fields', 'Artist veya Album alanı bulunamadı. Tablo alan adlarını kontrol edin.');
-            $record = va_nc_public_record($row, $offset + count($public));
+            // Dedupe only by API primary key, never artist/title: separate pressings are valid.
+            $source_id = $row['Id'] ?? $row['id'] ?? null;
+            if (is_scalar($source_id) && (string) $source_id !== '') {
+                $key = 'record:' . (string) $source_id;
+                if (isset($seen[$key])) continue;
+                $seen[$key] = true;
+            }
+            $record = va_nc_public_record($row, count($public));
             if ($record !== null) $public[] = $record;
         }
         if (count($body['list']) < 100 || ($body['pageInfo']['isLastPage'] ?? false) === true) {

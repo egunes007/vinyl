@@ -1,4 +1,4 @@
-VINYL ARCHIVE — NocoDB bağlantısı 1.0.0
+VINYL ARCHIVE — NocoDB bağlantısı 1.0.1
 WordPress 6.5+ / PHP 8.1+
 
 KURULUM
@@ -30,3 +30,5 @@ Yalnızca izin verilen halka açık alanlar 5 dakika önbelleğe alınır. NocoD
 
 DOĞRULAMA
 PHP sözdizimi kontrolleri; gizlilik, imza, sayfalama, önbellek ve hata senaryoları için WordPress HTTP işlevlerini taklit eden PHP testleri; gerçek veri biçimiyle DOM etkileşim testleri çalıştırıldı. Tam WordPress kurulumu ve evdeki gerçek NocoDB bağlantısı bu bulut ortamından test edilmedi. Son doğrulamayı kendi panelinizde yapın; ilk yüklemede albüm/sanatçı alanları ve imzalı sayısını NocoDB ile karşılaştırın.
+
+1.0.1: Artist ve Album alanları ikisi de boş satırlar sayılmaz. Aynı API birincil kimliği (Id/id) tekrar gelirse bir kez sayılır. Aynı sanatçı/albüme ait farklı kimlikli baskılar korunur. Güncellemede önbellek anahtarı yenilenir. NocoDB kayıtları silinmez veya değiştirilmez.

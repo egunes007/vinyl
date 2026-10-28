@@ -14,6 +14,8 @@ function va_nc_signed($notes) {
 }
 function va_nc_public_record($row, $fallback) {
     if (array_key_exists('Is_Public', $row) && !va_nc_true($row['Is_Public'])) return null;
+    // Empty imported rows are not collection items. Preserve partially filled albums.
+    if (va_nc_text($row['Artist'] ?? '') === '' && va_nc_text($row['Album'] ?? '') === '') return null;
     return array(
         'id'=>(string) $fallback,
         'artist'=>va_nc_text($row['Artist'] ?? ''), 'album'=>va_nc_text($row['Album'] ?? ''),
