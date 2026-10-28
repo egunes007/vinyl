@@ -1,6 +1,6 @@
 # VINYL ARCHIVE
 
-Türkçe, mobil uyumlu kişisel plak arşivi ön yüz prototipi. Koyu tema, kırmızı vurgular, CSS ile çizilmiş pikap ve özgün örnek albüm kapakları içerir.
+Türkçe, mobil uyumlu kişisel plak arşivi ön yüz prototipi. Koyu tema, kırmızı vurgular, yapay zekâyla üretilmiş, fotoğraf gerçekçiliğinde pikap görseli ve özgün örnek albüm kapakları içerir.
 
 ## Kurulum yapmadan ön izleme
 
@@ -42,3 +42,5 @@ Ana sayfadaki İmzalı Plaklar seçkisi ve menüdeki ayrı `#signed` sayfası, `
 NocoDB entegrasyonu henüz yoktur. İleride `Notes` alanındaki imza işareti sunucu tarafında değerlendirilerek yalnızca `signed` bilgisi aktarılmalıdır. Özel not metni tarayıcıya gönderilmemelidir. Gerçek notların biçimi ve olumsuz ifadeler (örneğin “imzalı değil”) entegrasyon aşamasında kontrol edilmelidir.
 
 Kaynakları değiştirdikten sonra `node scripts/build-preview.mjs` komutuyla çift tıklanarak açılan `ONIZLEME.html` kopyasını güncelleyin.
+
+Pikap görseli `public/turntable.png` dosyasında yer alır. Ön izleme oluşturucusu bu görseli HTML içine gömer; bağımsız ön izleme internet bağlantısı olmadan çalışır.

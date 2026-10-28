@@ -1,7 +1,9 @@
 import { readFile, writeFile } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
-const html = await read('index.html');
+const source = await read('index.html');
+const image = await readFile(new URL('public/turntable.png', root));
+const html = source.replace('/public/turntable.png', `data:image/png;base64,${image.toString('base64')}`);
 const css = await read('src/style.css');
 const data = (await read('src/data.js')).replaceAll('export ', '');
 const app = (await read('src/app.js')).replace("import { albums, filterAlbums } from './data.js';", '');
