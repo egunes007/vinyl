@@ -6,3 +6,9 @@ with ZipFile(root / 'wordpress/vinyl-archive-theme.zip', 'w', ZIP_DEFLATED) as a
         if path.is_file():
             archive.write(path, path.relative_to(root / 'wordpress'))
 print('wordpress/vinyl-archive-theme.zip hazır.')
+
+with ZipFile(root / 'wordpress/vinyl-nocodb-plugin.zip', 'w', ZIP_DEFLATED) as archive:
+    for path in sorted((root / 'wordpress/vinyl-nocodb').rglob('*')):
+        if path.is_file():
+            archive.write(path, path.relative_to(root / 'wordpress'))
+print('wordpress/vinyl-nocodb-plugin.zip hazır.')

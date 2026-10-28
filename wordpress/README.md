@@ -33,3 +33,10 @@ Sekiz albüm ve iki imza işareti tamamen örnektir. Detaylar açılır pencered
 Ana prototip kaynakları kök dizinde tutulur. `node scripts/build-wordpress.mjs` HTML/CSS/JS bileşenlerini temaya aktarır; ardından `python3 scripts/package-wordpress.py` yüklenebilir ZIP'i yeniden üretir. PHP şablonları ve `assets/wordpress.css` tema içinde tutulur. `node --test scripts/wordpress.test.mjs` tema paketinin yapısını ve gerçek WordPress bağlantılarını kontrol eder.
 
 Bu bulut ortamında PHP/WordPress çalışma zamanı olmadığı için WordPress üzerinde etkinleştirme ve tarayıcı testi yapılmamıştır. Canlıya geçmeden önce bir WordPress test kurulumunda yukarıdaki kontroller tamamlanmalıdır.
+
+
+## NocoDB bağlantısı (yeni)
+
+Güncel tema 0.3.0 ile birlikte `vinyl-nocodb-plugin.zip` dosyasını Eklentiler bölümünden yükleyin. Adım adım kurulum, token saklama, ağ ve gizlilik bilgileri [eklenti yönergelerinde](vinyl-nocodb/README.txt) bulunur. Eklenti etkinleştirildiğinde tema örnek verileri kullanmaz. Tema tek başına örnek modunu korur. Yukarıdaki ilk prototip açıklamalarından farklı olarak bu güncel sürüm NocoDB bağlantısını destekler; gerçek ev sunucusu bağlantısı kullanıcı panelinde doğrulanmalıdır.
+
+Geliştirme kontrolleri: `php tests/nocodb.php` (WordPress HTTP/önbellek taklitleri), `node tests/live-theme.mjs` (geçici `/tmp/vinyl-browser` dizinine jsdom kurulumu gerekir). PHP 8.4 ile PHP dosyalarının sözdizimi ve bağlantı testleri çalıştırıldı; gerçek WordPress üzerinde kurulum henüz denenmedi.

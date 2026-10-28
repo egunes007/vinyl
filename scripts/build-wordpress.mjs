@@ -15,6 +15,36 @@ await copyFile(new URL('src/data.js',root),new URL('assets/data.js',theme));
 let app = await readFile(new URL('src/app.js',root),'utf8');
 // WordPress supplies real page URLs; collection actions navigate to the collection page.
 app = app.replace("render();location.hash='collection';", "render();const target=new URL(document.body.dataset.collectionUrl);if(tile.dataset.artist)target.searchParams.set('artist',tile.dataset.artist);if(tile.dataset.genre)target.searchParams.set('genre',tile.dataset.genre);location.href=target.href;");
+// Escape all API text before interpolation into the existing static card templates.
+app = app.replace("import { albums, filterAlbums } from './data.js';", `import { albums as demoAlbums } from './data.js';
+const payloadNode = document.getElementById('vinyl-collection-data');
+const payload = payloadNode ? JSON.parse(payloadNode.textContent) : null;
+const live = payload?.live === true;
+const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const albums = (live ? payload.albums : demoAlbums).map((row, index) => {
+ const a = Object.fromEntries(Object.entries(row).map(([k,v]) => [k, typeof v === 'string' ? escapeHTML(v) : v]));
+ return {...a, id:index, cover:live?'public-cover':a.cover, color:live?'#292523':a.color, mark:live?'◉':a.mark, genre:a.genre || 'Diğer'};
+});
+const filterAlbums = (query='', genre='') => {
+ const term=escapeHTML(query.trim().toLocaleLowerCase('tr-TR'));
+ return albums.filter(a=>(!genre || a.genre===escapeHTML(genre)) && (a.artist+' '+a.album).toLocaleLowerCase('tr-TR').includes(term));
+};`);
+app = app.replace("$('#featured-grid').innerHTML=albums.slice(0,4)", "$('#featured-grid').innerHTML=(live ? albums.filter(a=>a.featured).concat(albums.filter(a=>!a.featured)).slice(0,4) : albums.slice(0,4))");
+app = app.replace("const term = $('#signed-search').value.trim().toLocaleLowerCase('tr-TR');", "const term = escapeHTML($('#signed-search').value.trim().toLocaleLowerCase('tr-TR'));");
+app = app.replace('ÖZGÜN ÖRNEK KAPAK', "${live ? 'KAPAK GÖRSELİ YOK' : 'ÖZGÜN ÖRNEK KAPAK'}");
+app = app.replace("'<span class=\"signed-badge\">✎ İmzalı · Örnek</span>'", "'<span class=\"signed-badge\">✎ İmzalı' + (live ? '' : ' · Örnek') + '</span>'");
+app = app.replace('ÖRNEK ALBÜM · TASARIM PROTOTİPİ', "${live ? 'KOLEKSİYONDAN' : 'ÖRNEK ALBÜM · TASARIM PROTOTİPİ'}");
+app = app.replace("a.signed?'İmzalı (örnek)'", "a.signed?(live?'İmzalı':'İmzalı (örnek)')");
+app = app.replace("['Baskı yılı','Örnek veride belirtilmedi']", "['Baskı yılı',live?(a.pressingYear || 'Belirtilmedi'):'Örnek veride belirtilmedi']");
+app = app.replace("a.country+' (örnek)'", "(a.country || 'Belirtilmedi')+(live?'':' (örnek)')");
+app = app.replace("['Format','LP · 12 inç (örnek)']", "['Format',live?(a.format || 'Belirtilmedi'):'LP · 12 inç (örnek)']");
+app = app.replace('Bu kayıt gerçek koleksiyona bağlı değildir. Kapak, albümün resmî görseli yerine kullanılan özgün bir tasarım yer tutucusudur.', "${live ? 'Koleksiyon kaydı NocoDB üzerinden alınmıştır. Görsel, kapak bulunmadığında kullanılan yer tutucudur.' : 'Bu kayıt gerçek koleksiyona bağlı değildir. Kapak, albümün resmî görseli yerine kullanılan özgün bir tasarım yer tutucusudur.'}");
+app = app.replace('${result.length} örnek plak', "${result.length}${live ? '' : ' örnek'} plak");
+app = app.replace('${matches.length} örnek imzalı plak', "${matches.length}${live ? '' : ' örnek'} imzalı plak");
+
+app = app.replace("$('#artist-grid').innerHTML=[...albums]", "$('#artist-grid').innerHTML=[...new Map(albums.map(a=>[a.artist,a])).values()]");
+app = app.replace('${albums.filter(a=>a.genre===g).length} örnek plak', "${albums.filter(a=>a.genre===g).length}${live ? '' : ' örnek'} plak");
+app = app.replace('1 plak ↗', '${albums.filter(record=>record.artist===a.artist).length} plak ↗');
 const start=app.indexOf('function routeSigned(');
 app=app.slice(0,start)+`
 const view = document.body.dataset.archiveView || 'home';
@@ -26,9 +56,23 @@ if (views[view]) {
 const params = new URLSearchParams(location.search);
 $('#search').value = params.get('artist') || '';
 const requestedGenre = params.get('genre');
-if (genres.includes(requestedGenre)) $('#genre-filter').value = requestedGenre;
+if (requestedGenre && genres.includes(escapeHTML(requestedGenre))) $('#genre-filter').value = requestedGenre;
 render();
 document.querySelectorAll('nav a').forEach(a => {if(new URL(a.href).pathname===location.pathname)a.setAttribute('aria-current','page');});
+if(live) {
+ $('.demo').textContent = payload.error ? 'Koleksiyon şu anda yüklenemiyor. Lütfen daha sonra tekrar deneyin.' : 'KİŞİSEL PLAK KOLEKSİYONU · VINYL ARCHIVE';
+ const labels = ['#signed-feature > p.muted', '#signed > p.muted', '#collection .section-heading > .muted'];
+ labels.forEach(selector => document.querySelectorAll(selector).forEach(node=>node.hidden=true));
+ document.querySelectorAll('#signed-feature > p.muted').forEach(node=>node.hidden=true);
+ document.querySelector('.stats div:first-child span').textContent='PLAK';
+ document.querySelector('footer small').textContent='Kişisel plak koleksiyonu · VINYL ARCHIVE';
+ if (!albums.length) {
+  const message=payload.error?'Koleksiyon bağlantısı şu anda kullanılamıyor.':'Henüz halka açık plak bulunmuyor.';
+  $('#collection-grid').textContent=message;
+  $('#signed-grid').textContent=message;
+ }
+}
+
 `;
 await writeFile(new URL('assets/app.js',theme),app);
 console.log('WordPress tema bileşenleri güncellendi.');

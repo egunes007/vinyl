@@ -46,3 +46,7 @@ Kaynakları değiştirdikten sonra `node scripts/build-preview.mjs` komutuyla ç
 ## WordPress teması
 
 Kurulabilir tema paketi: `wordpress/vinyl-archive-theme.zip`. Kurulum, gerekli sayfa adresleri ve test sınırları için [WordPress yönergeleri](wordpress/README.md) dosyasını okuyun. Eski pikap çizimi ve imzalı plaklar bölümü korunur. Tema şimdilik örnek verilerle çalışır; WordPress ve CasaOS bu ortamda kurulmamıştır.
+
+## NocoDB eklentisi
+
+`wordpress/vinyl-nocodb-plugin.zip` ve güncel `wordpress/vinyl-archive-theme.zip` paketleri birlikte gerçek koleksiyonu göstermek için hazırlanmıştır. Kurulum ve sınırlamalar: [eklenti yönergeleri](wordpress/vinyl-nocodb/README.txt). Kaynak prototip ve ONIZLEME.html dosyası bağımsız örnek sürüm olarak korunur.
