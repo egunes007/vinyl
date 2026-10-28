@@ -2,13 +2,14 @@
 /**
  * Plugin Name: Vinyl Archive — NocoDB
  * Description: NocoDB v2 koleksiyonunu salt okunur biçimde VINYL ARCHIVE temasına bağlar.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Requires at least: 6.5
  * Requires PHP: 8.1
  */
 defined('ABSPATH') || exit;
 require_once __DIR__ . '/public-record.php';
 require_once __DIR__ . '/discogs.php';
+require_once __DIR__ . '/manual-covers.php';
 register_deactivation_hook(__FILE__, function () { wp_clear_scheduled_hook('va_dc_refresh'); });
 function va_nc_settings() {
     return wp_parse_args(get_option('va_nc_settings', array()), array('url'=>'http://192.168.1.13:8080', 'table'=>'m4z9hmr4f6ylz8m'));
@@ -16,13 +17,14 @@ function va_nc_settings() {
 function va_nc_token() {
     return defined('VINYL_NOCODB_TOKEN') ? VINYL_NOCODB_TOKEN : get_option('va_nc_token', '');
 }
-function va_nc_key() { return 'va_nc_collection_v3'; }
+function va_nc_key() { return 'va_nc_collection_v4'; }
 function va_nc_fetch($refresh = false) {
     if (!$refresh) { $cached = get_transient(va_nc_key()); if (is_array($cached)) return $cached; }
     $settings = va_nc_settings();
     if (!va_nc_token()) return new WP_Error('missing_token', 'API token henüz tanımlanmadı.');
     $public = array();
     $seen = array();
+    $attachments = array();
     for ($offset = 0; $offset < 10000; $offset += 100) {
         $url = $settings['url'] . '/api/v2/tables/' . rawurlencode($settings['table']) . '/records?limit=100&offset=' . $offset;
         $response = wp_remote_get($url, array('timeout'=>15, 'redirection'=>0, 'sslverify'=>true, 'limit_response_size'=>4 * 1024 * 1024, 'headers'=>array('xc-token'=>va_nc_token(), 'Accept'=>'application/json')));
@@ -41,9 +43,18 @@ function va_nc_fetch($refresh = false) {
                 $seen[$key] = true;
             }
             $record = va_nc_public_record($row, count($public));
-            if ($record !== null) $public[] = $record;
+            if ($record !== null) {
+                $source = va_nc_attachment_url($row['Cover_Image'] ?? array());
+                if ($source !== '') {
+                    $cover_key = hash('sha256', $record['artist'] . "\0" . $record['album'] . "\0" . $source);
+                    $attachments[$cover_key] = $source;
+                    $record['manualCoverKey'] = $cover_key;
+                }
+                $public[] = $record;
+            }
         }
         if (count($body['list']) < 100 || ($body['pageInfo']['isLastPage'] ?? false) === true) {
+            update_option('va_nc_attachment_sources', $attachments, false);
             set_transient(va_nc_key(), $public, 5 * MINUTE_IN_SECONDS);
             return $public;
         }

@@ -26,6 +26,7 @@ function wp_remote_get($url,$args) {
         check($args['headers']['Authorization']==='Discogs token=discogs-test-only', 'Discogs auth on server');
         check(!isset($args['headers']['xc-token']), 'no NocoDB token to Discogs');
         check($args['user-agent']!=='','Discogs user agent');
+        check($args['timeout']===20,'allow observed 10.3-second Discogs response');
     } else check($args['headers']['xc-token']==='test-only-token', 'server header');
     check($args['redirection']===0, 'no token forwarding redirects');
     check($args['sslverify']===true, 'TLS verification');
@@ -33,7 +34,7 @@ function wp_remote_get($url,$args) {
     return array_shift($GLOBALS['responses']);
 }
 function wp_remote_retrieve_response_code($r) {return $r['status'];}
-function wp_remote_retrieve_body($r) {return json_encode($r['body']);}
+function wp_remote_retrieve_body($r) {return $r['raw'] ?? json_encode($r['body']);}
 function check($condition, $label) {if (!$condition) throw new Exception($label);}
 require __DIR__.'/../wordpress/vinyl-nocodb/vinyl-nocodb.php';
 $GLOBALS['options']=['va_nc_token'=>'test-only-token'];

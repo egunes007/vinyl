@@ -9,14 +9,21 @@ function safeDiscogsImage(value) {
   return url.protocol === 'https:' && ['i.discogs.com','img.discogs.com'].includes(url.hostname) && !url.username && !url.password && !url.port ? escapeHTML(url.href) : '';
  } catch { return ''; }
 }
+function safeManualImage(value) {
+ try {
+  const url = new URL(value);
+  return url.origin === location.origin && ['http:','https:'].includes(url.protocol) && !url.username && !url.password ? escapeHTML(url.href) : '';
+ } catch { return ''; }
+}
 function discogsCover(a) {
- return a.coverImage ? `<div class="cover photo-cover"><img src="${a.coverImage}" data-cover-id="${a.id}" alt="${a.artist} — ${a.album} albüm kapağı" loading="lazy" decoding="async" referrerpolicy="no-referrer"><span class="cover-credit">Görsel: Discogs</span></div>` : '';
+ const image = a.manualCoverUrl || a.coverImage;
+ return image ? `<div class="cover photo-cover"><img src="${image}" data-cover-id="${a.id}" alt="${a.artist} — ${a.album} albüm kapağı" loading="lazy" decoding="async" referrerpolicy="no-referrer"><span class="cover-credit">${a.manualCoverUrl ? 'Koleksiyon kapağı' : 'Görsel: Discogs'}</span></div>` : '';
 }
 
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const albums = (live ? payload.albums : demoAlbums).map((row, index) => {
  const a = Object.fromEntries(Object.entries(row).map(([k,v]) => [k, typeof v === 'string' ? escapeHTML(v) : v]));
- return {...a, id:index, coverImage:live?safeDiscogsImage(row.coverImage):'', discogsUrl:live && /^[1-9][0-9]{0,11}$/.test(String(row.discogsId))?'https://www.discogs.com/release/'+row.discogsId:'', cover:live?'public-cover':a.cover, color:live?'#292523':a.color, mark:live?'◉':a.mark, genre:a.genre || 'Diğer'};
+ return {...a, id:index, manualCoverUrl:live?safeManualImage(row.manualCoverUrl):'', coverImage:live?safeDiscogsImage(row.coverImage):'', discogsUrl:live && /^[1-9][0-9]{0,11}$/.test(String(row.discogsId))?'https://www.discogs.com/release/'+row.discogsId:'', cover:live?'public-cover':a.cover, color:live?'#292523':a.color, mark:live?'◉':a.mark, genre:a.genre || 'Diğer'};
 });
 const filterAlbums = (query='', genre='') => {
  const term=escapeHTML(query.trim().toLocaleLowerCase('tr-TR'));
@@ -40,7 +47,7 @@ $('#artist-grid').innerHTML=[...new Map(albums.map(a=>[a.artist,a])).values()].s
 document.addEventListener('click',e=>{
  const tile=e.target.closest('[data-genre], [data-artist]');if(tile){$('#search').value=tile.dataset.artist||'';$('#genre-filter').value=tile.dataset.genre||'';render();const target=new URL(document.body.dataset.collectionUrl);if(tile.dataset.artist)target.searchParams.set('artist',tile.dataset.artist);if(tile.dataset.genre)target.searchParams.set('genre',tile.dataset.genre);location.href=target.href;}
  const c=e.target.closest('[data-album]');if(!c)return;const a=albums.find(a=>a.id===Number(c.dataset.album));
- $('#album-detail').innerHTML=`${cover(a)}<div class="detail-copy"><p class="eyebrow">${live ? 'KOLEKSİYONDAN' : 'ÖRNEK ALBÜM · TASARIM PROTOTİPİ'}</p><h2>${a.album}</h2><p class="detail-artist">${a.artist}</p><dl>${[['İmza durumu',a.signed?(live?'İmzalı':'İmzalı (örnek)'):'Belirtilmedi'],['İlk yayın yılı',a.year],['Baskı yılı',live?(a.pressingYear || 'Belirtilmedi'):'Örnek veride belirtilmedi'],['Baskı ülkesi',(a.country || 'Belirtilmedi')+(live?'':' (örnek)')],['Plak şirketi',a.label],['Format',live?(a.format || 'Belirtilmedi'):'LP · 12 inç (örnek)'],['Tür',a.genre],['Stil',a.style]].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl><p class="muted">${live ? 'Koleksiyon kaydı NocoDB üzerinden alınmıştır. Kapaklar Discogs kaynaklıdır; kapak bulunamadığında yer tutucu gösterilir.' : 'Bu kayıt gerçek koleksiyona bağlı değildir. Kapak, albümün resmî görseli yerine kullanılan özgün bir tasarım yer tutucusudur.'}</p>${a.discogsUrl ? '<a class="discogs-credit" href="'+a.discogsUrl+'" target="_blank" rel="noopener noreferrer">Albüm ve kapak kaynağı: Discogs ↗</a>' : ''}</div>`;
+ $('#album-detail').innerHTML=`${cover(a)}<div class="detail-copy"><p class="eyebrow">${live ? 'KOLEKSİYONDAN' : 'ÖRNEK ALBÜM · TASARIM PROTOTİPİ'}</p><h2>${a.album}</h2><p class="detail-artist">${a.artist}</p><dl>${[['İmza durumu',a.signed?(live?'İmzalı':'İmzalı (örnek)'):'Belirtilmedi'],['İlk yayın yılı',a.year],['Baskı yılı',live?(a.pressingYear || 'Belirtilmedi'):'Örnek veride belirtilmedi'],['Baskı ülkesi',(a.country || 'Belirtilmedi')+(live?'':' (örnek)')],['Plak şirketi',a.label],['Format',live?(a.format || 'Belirtilmedi'):'LP · 12 inç (örnek)'],['Tür',a.genre],['Stil',a.style]].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl><p class="muted">${live ? 'Koleksiyon kaydı NocoDB üzerinden alınmıştır. Kapaklar koleksiyondan veya Discogs üzerinden alınır; kapak bulunamadığında yer tutucu gösterilir.' : 'Bu kayıt gerçek koleksiyona bağlı değildir. Kapak, albümün resmî görseli yerine kullanılan özgün bir tasarım yer tutucusudur.'}</p>${a.discogsUrl ? '<a class="discogs-credit" href="'+a.discogsUrl+'" target="_blank" rel="noopener noreferrer">Discogs albüm kaydı ↗</a>' : ''}</div>`;
  $('#album-dialog').showModal();
 });
 $('.close').onclick=()=>$('#album-dialog').close();$('#album-dialog').addEventListener('click',e=>{if(e.target===$('#album-dialog'))$('#album-dialog').close();});
@@ -76,7 +83,7 @@ document.addEventListener('error', event => {
  if (!(image instanceof HTMLImageElement) || !image.hasAttribute('data-cover-id')) return;
  const album = albums.find(a=>a.id === Number(image.dataset.coverId));
  if (!album) return;
- album.coverImage='';
+ if (album.manualCoverUrl) album.manualCoverUrl=''; else album.coverImage='';
  // Update every visible instance (featured, collection and modal) without retry loops.
  document.querySelectorAll('img[data-cover-id="'+album.id+'"]').forEach(img=>{const wrapper=img.closest('.photo-cover');if(wrapper)wrapper.outerHTML=cover(album);});
 }, true);

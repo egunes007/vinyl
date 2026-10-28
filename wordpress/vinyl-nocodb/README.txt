@@ -1,4 +1,4 @@
-VINYL ARCHIVE — NocoDB bağlantısı 1.1.0
+VINYL ARCHIVE — NocoDB bağlantısı 1.2.0
 WordPress 6.5+ / PHP 8.1+
 
 KURULUM
@@ -59,3 +59,18 @@ Kapakların telif hakları hak sahiplerine aittir; API token'ı görsel lisansı
 
 DOĞRULAMA SINIRI
 PHP sözdizimi, API taklitleri ile kimlik doğrulama izolasyonu/önbellek/hız sınırı/kapaksız yanıt testleri ve DOM üzerinde kapak/kaynak bağlantısı/bozuk görsel testleri geçti. Bu bulut ortamında Discogs token'ı yoktur; ağ politikası resmî Discogs web belgelerine erişimi de engellediğinden güncel koşul metni burada doğrulanamadı. Canlı API ve gerçek WordPress zamanlayıcısı evdeki WordPress üzerinde ayrıca doğrulanmalıdır. Token'ı buraya göndermeyin; panelin hata/sonuç mesajını paylaşabilirsiniz.
+
+1.1.1: Discogs HTTP bekleme süresi 8 saniyeden 20 saniyeye yükseltildi. Ev sunucusunda gözlenen 10,3 saniyelik başarılı yanıt desteklenir. Yavaş bağlantıda arka plan görevi bir istekte durur; iki uzun isteğin PHP süre sınırını aşması önlenir. Elle eşleştirme, hâlâ geçerli kapakları yeniden sıraya almaz; böylece uzun eşleştirme turu tamamlanabilir. Her istek yaklaşık 10 saniye sürerse 316 kayıt yaklaşık bir saat alabilir. Duraklatıp devam etmek mümkündür. Tema değişikliği gerekmez.
+
+MANUEL NOCODB KAPAKLARI — 1.2.0 / TEMA 0.5.0
+NocoDB'deki mevcut Cover_Image alanına yüklenen görsel dosyaları desteklenir. Yeni alan oluşturulmaz; mevcut veriler değiştirilmez ve Discogs görselleri NocoDB'ye otomatik yazılmaz. Kapakları NocoDB arayüzünden yükleyebilirsiniz. Öncelik: Cover_Image > Discogs > yer tutucu. Discogs token'ı manuel kapaklar için gerekmez.
+
+Eklenti 1.2.0 ve tema 0.5.0 paketlerinin bütün dosyalarını birlikte güncelleyin. Eklentide yeni manual-covers.php dosyası da olmalıdır. Ardından Ayarlar > Vinyl NocoDB > Kaydet ve bağlantıyı test et düğmesine basın ve siteyi Ctrl+Shift+R ile yenileyin.
+
+Standart NocoDB attachment listesi/nesnesi ve JSON metni içinde signedUrl, url veya path alanları, /download/ yollarıyla desteklenir. Uzak sunucudaki URL'nin yolu yapılandırılmış NocoDB sunucusuna uyarlanır; token başka bir hosta gönderilmez. Farklı API depolama/attachment biçimleri varsa gerçek yanıt biçimine göre ayrıca uyarlama gerekebilir. Ev sunucunuzun gerçek attachment yanıtı bu geliştirme ortamında görülmedi.
+
+Ham attachment URL'leri ve imzalı sorgu parametreleri tarayıcıya aktarılmaz. Halka açık albümün kapağı WordPress'in /wp-json/vinyl-archive/v1/cover/{anahtar} uç noktasından sunulur. Görsel adresinin bilinmesi tek başına yeterli değildir: güncel halka açık koleksiyon içindeki eşleşme kontrol edilir. Yalnızca NocoDB'nin /download/ yolları alınır; yönlendirmeler izlenmez. Fiyat ve özel notlar aktarılmaz.
+
+JPEG, PNG, WebP, GIF kabul edilir; SVG/HTML kabul edilmez. Boyut sınırı 8 MB ve 40 megapikseldir. Görseller WordPress diskine kopyalanmaz, gerektiğinde yerel NocoDB'den alınır. Ön yüzden tembel yükleme kullanılır, tarayıcı 5 dakika önbellek tutabilir. Cover_Image değişiklikleri 5 dakikalık koleksiyon önbelleği yenilendiğinde görünür; panelde bağlantı testi önbelleği hemen yeniler. Albüm gizlenirse önceden tarayıcıya ulaşmış görseli geri çekmek mümkün değildir.
+
+Discogs devre dışı olsa veya internet DNS'i çalışmasa da, WordPress'in yerel NocoDB bağlantısı çalışıyorsa manuel kapaklar gösterilebilir. Dosya okunamazsa Discogs'a, o da yoksa yer tutucuya dönülür. PHP API taklitleri ile attachment ayrıştırma, hedef host sınırlaması, özel URL gizliliği, gerçek PNG doğrulaması ve gizli kayıtlar; DOM testleriyle kapak önceliği ve hata geri dönüşü doğrulandı. Canlı attachment denemesi kullanıcı sunucusunda yapılmalıdır.

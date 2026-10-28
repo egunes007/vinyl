@@ -47,3 +47,8 @@ Geliştirme kontrolleri: `php tests/nocodb.php` (WordPress HTTP/önbellek taklit
 Tema **0.4.0** ve eklenti **1.1.0** paketlerini birlikte güncelleyin. Ardından **Ayarlar → Vinyl Discogs** bölümüne Discogs hesabınızdan aldığınız ayrı kişisel API token'ı girip eşleştirmeyi etkinleştirin ve **Kapakları eşleştir / devam et** düğmesine basın. Detaylı kurulum, yenileme, kullanım hakkı ve test sınırları [eklenti yönergelerinde](vinyl-nocodb/README.txt) bulunur. NocoDB verileri değişmez.
 
 `php tests/discogs.php`: Discogs API taklitleriyle token izolasyonu, URL izin listesi, görsel seçimi, önbellek, 404/429/403 ve bozuk yanıt kontrolleri. `node tests/live-theme.mjs`: kart ve detay görselleri, kaynak bağlantıları, bozuk görsel geri dönüşü. Canlı Discogs ve WordPress cron doğrulaması kullanıcı sunucusunda yapılmalıdır.
+
+
+## NocoDB'ye yüklenen kapaklar
+
+Tema **0.5.0** ve eklenti **1.2.0**, mevcut `Cover_Image` ek dosya alanını destekler. Eklentide `manual-covers.php` dahil bütün dosyaları güncelleyin. Ardından NocoDB bağlantı testini çalıştırarak önbelleği yenileyin. Site önce manuel kapağı, yoksa Discogs'u, o da yoksa yer tutucuyu gösterir. Manuel kapakların görünmesi için Discogs bağlantısı gerekmez. NocoDB kayıtlarına yazma yapılmaz. Detaylar [eklenti yönergelerinde](vinyl-nocodb/README.txt). Test: `php tests/manual-covers.php`.

@@ -31,12 +31,13 @@ function va_dc_ids() {
     foreach ($records as $record) { $id = va_dc_id($record['discogsId'] ?? ''); if ($id !== '') $ids[$id] = $id; }
     return array_values($ids);
 }
-function va_dc_pending($ids) {
+function va_dc_pending($ids, $refresh = true) {
     $covers = va_dc_entries();
     // Refresh well before expiry. Failed/missing images are retried after one hour.
     foreach ($ids as $id) {
         $entry = $covers[$id] ?? array();
-        if (($entry['refresh'] ?? 0) <= time()) return $id;
+        $due = $refresh ? ($entry['refresh'] ?? 0) : ($entry['expires'] ?? 0);
+        if ($due <= time()) return $id;
     }
     return '';
 }
@@ -51,8 +52,8 @@ function va_dc_fetch_cover($id) {
     update_option('va_dc_wait_until', time() + 2, false);
     try {
         $response = wp_remote_get('https://api.discogs.com/releases/' . $id, array(
-            'timeout'=>8, 'redirection'=>0, 'sslverify'=>true, 'limit_response_size'=>2 * 1024 * 1024,
-            'user-agent'=>'VinylArchive/1.1.0 +https://github.com/egunes007/vinyl',
+            'timeout'=>20, 'redirection'=>0, 'sslverify'=>true, 'limit_response_size'=>2 * 1024 * 1024,
+            'user-agent'=>'VinylArchive/1.1.1 +https://github.com/egunes007/vinyl',
             'headers'=>array('Authorization'=>'Discogs token=' . va_dc_token(), 'Accept'=>'application/json')
         ));
         if (is_wp_error($response)) return new WP_Error('network', 'Discogs bağlantısı kurulamadı. Sunucunun HTTPS çıkışını kontrol edin.');
@@ -96,11 +97,17 @@ add_action('init', function () {
 });
 add_action('va_dc_refresh', function () {
     if (!va_dc_enabled()) return;
+    $started = microtime(true);
     $ids = va_dc_ids(); if (is_wp_error($ids)) return;
+    if (microtime(true) - $started >= 5) return;
     for ($i = 0; $i < 2; $i++) {
         $id = va_dc_pending($ids);
         if (!$id || is_wp_error(va_dc_fetch_cover($id))) break;
-        if ($i === 0) sleep(2);
+        // Leave room for another full HTTP timeout within a typical 30-second PHP budget.
+        if ($i === 0) {
+            if (microtime(true) - $started >= 3) break;
+            sleep(2);
+        }
     }
 });
 add_action('admin_menu', function () { add_options_page('Discogs Kapakları', 'Vinyl Discogs', 'manage_options', 'vinyl-discogs', 'va_dc_admin'); });
@@ -110,7 +117,7 @@ add_action('wp_ajax_va_dc_sync', function () {
     if (!va_dc_enabled()) wp_send_json_error(array('message'=>'Önce Discogs ayarlarını kaydedin.'), 400);
     $ids = va_dc_ids();
     if (is_wp_error($ids)) wp_send_json_error(array('message'=>$ids->get_error_message()), 400);
-    $id = va_dc_pending($ids);
+    $id = va_dc_pending($ids, false);
     if (!$id) wp_send_json_success(array('done'=>true, 'total'=>count($ids)));
     $result = va_dc_fetch_cover($id);
     if (is_wp_error($result)) {
@@ -151,7 +158,7 @@ function va_dc_admin() {
     <?php submit_button('Ayarları kaydet'); ?></form>
     <hr><p><?php echo intval($found); ?> geçerli kapak eşleşmesi önbellekte. Kapaksız ve geçersiz ID’li plaklarda yer tutucu gösterilir.</p>
     <button id="va-dc-start" class="button button-primary" <?php disabled(!va_dc_enabled()); ?>>Kapakları eşleştir / devam et</button> <button id="va-dc-stop" class="button" disabled>Duraklat</button>
-    <p id="va-dc-status" aria-live="polite">İlk eşleştirme birkaç dakika sürebilir. Bu sayfayı açık tutun; duraklatıp sonra devam edebilirsiniz.</p>
+    <p id="va-dc-status" aria-live="polite">İlk eşleştirme bağlantı hızına göre uzun sürebilir. İstek başına 10 saniye sürerse 316 kapak yaklaşık bir saatte tamamlanır. Bu sayfayı açık tutun; duraklatıp sonra devam edebilirsiniz.</p>
     <p>Görsel adresleri en fazla 6 saat saklanır. WordPress zamanlayıcısı arka planda yeniler; az ziyaret edilen sitelerde gecikebilir. Gerekirse bu ekrandan yeniden eşleştirin. Herkese açık sayfalar ve CDN önbelleği kullanıyorsanız eşleştirme sonrası onları da temizleyin.</p></div>
     <script>
     (()=>{const start=document.getElementById('va-dc-start'),stop=document.getElementById('va-dc-stop'),status=document.getElementById('va-dc-status');let running=false,timer,processed=0;

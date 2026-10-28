@@ -54,3 +54,7 @@ Kurulabilir tema paketi: `wordpress/vinyl-archive-theme.zip`. Kurulum, gerekli s
 ## Discogs kapakları
 
 Tema 0.4.0 ve NocoDB eklentisi 1.1.0, isteğe bağlı Discogs kapak eşleştirmesini destekler. NocoDB'deki Discogs_ID release değerleri kullanılır; ayrı Discogs token'ı yalnızca WordPress panelinde tanımlanır. [Kurulum ve sınırlar](wordpress/vinyl-nocodb/README.txt). Örnek ONIZLEME.html sürümü değişmez.
+
+## Manuel kapaklar
+
+Tema 0.5.0 / eklenti 1.2.0 ile NocoDB `Cover_Image` alanına yüklenen kapaklar WordPress üzerinden sunulur; Discogs'a göre önceliklidir. Token ve özel attachment URL'leri ziyaretçilere gönderilmez. Kaynak veritabanına yazma yapılmaz.
