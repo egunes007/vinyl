@@ -13,9 +13,16 @@ const metrics = [
 // Derive from the existing link so WordPress installations in subdirectories work too.
 const signedLink = document.querySelector('#signed-feature .text-link').href;
 statsNode.setAttribute('aria-label','Koleksiyon istatistikleri');
-statsNode.innerHTML = metrics.map(([label,n],i)=> i===10 ? `<a class="stat-card" href="${signedLink}"><strong>${n}</strong><span>${label}</span></a>` : `<div class="stat-card"><strong${({0:'album-count',8:'artist-count',11:'genre-count'}[i]) ? ' id="'+({0:'album-count',8:'artist-count',11:'genre-count'}[i])+'"' : ''}>${n}</strong><span>${label}</span></div>`).join('');
 const collectionURL = new URL(document.body.dataset.collectionUrl || '/koleksiyon/', location.origin);
-function listURL(format) {const url=new URL(collectionURL);url.searchParams.set('format',format);return url.href;}
+function listURL(format) {const url=new URL(collectionURL);if(format)url.searchParams.set('format',format);return url.href;}
+const formatOptions = [['','Tüm formatlar'],['lp','LP'],['double','İkili LP — LP (2)'],['boxset','Boxset'],['ten','10″'],['single','Single'],['shellac','Taş plak — 78'],['flexi','Flexi — Flaxy'],['other','Diğer']];
+const metricFormats=['','lp','double','boxset','ten','single','shellac','flexi'];
+statsNode.innerHTML=metrics.map(([label,n],i)=>{
+ const id=({0:'album-count',8:'artist-count',11:'genre-count'})[i];
+ const content=`<strong${id ? ' id="'+id+'"' : ''}>${n}</strong><span>${label}</span>`;
+ const href=i<8?listURL(metricFormats[i]):i===10?signedLink:null;
+ return href?`<a class="stat-card" href="${href}">${content}</a>`:`<div class="stat-card">${content}</div>`;
+}).join('');
 function sample(records) {
  const result=[...records];
  for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}
@@ -55,15 +62,36 @@ function renderPurchases(){
  document.querySelector('#purchase-note').textContent=live ? `${purchase.undated || 0} kaydın alım tarihi eksik veya geçersiz; tabloya dahil edilmedi. Toplam sütunu diğer formatları da kapsar.` : 'Örnek modunda alım tarihi verisi bulunmuyor.';
 }
 yearSelect.addEventListener('change',renderPurchases);renderPurchases();
-const requestedFormat=params.get('format');
-if(view==='collection' && requestedFormat){
- const renderFormat=()=>{
-  const result=filterAlbums($('#search').value,$('#genre-filter').value).filter(a=>formatClass(a)===requestedFormat);
-  $('#collection-grid').innerHTML=result.length?result.map(card).join(''):'<p class="empty">Bu aramaya uygun plak bulunamadı.</p>';
+if(view==='collection'){
+ const filters=document.querySelector('#collection .filters');
+ const formatSelect=document.createElement('select');formatSelect.id='format-filter';formatSelect.setAttribute('aria-label','Plak formatı');
+ formatSelect.innerHTML=formatOptions.map(([value,label])=>`<option value="${value}">${label}</option>`).join('');
+ const sortSelect=document.createElement('select');sortSelect.id='collection-sort';sortSelect.setAttribute('aria-label','Koleksiyon sıralaması');
+ const sorts=[['artist-asc','Sanatçı: A–Z'],['artist-desc','Sanatçı: Z–A'],['purchase-desc','Alım sırası: Yeniden eskiye'],['purchase-asc','Alım sırası: Eskiden yeniye']];
+ sortSelect.innerHTML=sorts.map(([value,label])=>`<option value="${value}">${label}</option>`).join('');
+ filters.insertBefore(formatSelect,$('#clear'));filters.insertBefore(sortSelect,$('#clear'));
+ if(formatOptions.some(([key])=>key===params.get('format')))formatSelect.value=params.get('format');
+ if(sorts.some(([key])=>key===params.get('sort')))sortSelect.value=params.get('sort');
+ const decode=value=>{const node=document.createElement('textarea');node.innerHTML=value;return node.value;};
+ const alphabetic=(a,b)=>decode(a.artist).localeCompare(decode(b.artist),'tr')||decode(a.album).localeCompare(decode(b.album),'tr')||a.id-b.id;
+ const renderCollection=()=>{
+  const result=filterAlbums($('#search').value,$('#genre-filter').value).filter(a=>!formatSelect.value||formatClass(a)===formatSelect.value);
+  result.sort((a,b)=>{
+   if(sortSelect.value==='artist-desc')return -alphabetic(a,b);
+   if(sortSelect.value.startsWith('purchase-')){
+    const aKnown=Number.isInteger(a.purchaseOrder),bKnown=Number.isInteger(b.purchaseOrder);
+    if(aKnown!==bKnown)return aKnown?-1:1;
+    if(aKnown&&a.purchaseOrder!==b.purchaseOrder)return (a.purchaseOrder-b.purchaseOrder)*(sortSelect.value==='purchase-desc'?-1:1);
+   }
+   return alphabetic(a,b);
+  });
+  $('#collection-grid').innerHTML=result.length?result.map(card).join(''):payload?.error?'<p class="empty">Koleksiyon bağlantısı şu anda kullanılamıyor.</p>':'<p class="empty">Bu aramaya uygun plak bulunamadı.</p>';
   $('#result-count').textContent=`${result.length} plak gösteriliyor`;
  };
- ['input','change'].forEach(event=>document.querySelector('.filters').addEventListener(event,renderFormat));
- $('#clear').addEventListener('click',renderFormat);renderFormat();
+ [$('#search'),$('#genre-filter'),formatSelect,sortSelect].forEach(control=>['input','change'].forEach(event=>control.addEventListener(event,renderCollection)));
+ $('#clear').addEventListener('click',()=>{formatSelect.value='';sortSelect.value='artist-asc';renderCollection();});
+ const note=document.createElement('p');note.className='muted';note.textContent='Alım sıralaması ay bazındadır. Aynı aydaki kayıtlar sanatçı ve albüm adına göre sıralanır; alım ayı eksik kayıtlar sonda gösterilir.';
+ $('#result-count').before(note);renderCollection();
 }
 const homeSections=['home','dashboard-reports','featured','single-feature','signed-feature'];
 document.querySelectorAll('main > section').forEach(section=>section.hidden=view==='home' ? !(homeSections.includes(section.id)||section===statsNode) : section.id!==(views[view]||view));

@@ -80,3 +80,25 @@ Gerçek WordPress kurulumu ve canlı NocoDB/Discogs bağlantısı ayrıca test e
 Sürüm numaralı kurulum paketleri: [Tema 0.6.0](vinyl-archive-theme-0.6.0.zip) ve
 [NocoDB eklentisi 1.3.0](vinyl-nocodb-plugin-1.3.0.zip). Git sürüm etiketleri:
 `theme-v0.6.0` ve `plugin-v1.3.0`.
+
+
+## Koleksiyon filtreleri ve alım sırası — tema 0.7.0 / eklenti 1.4.0
+
+Güncel paketler: [Tema 0.7.0](vinyl-archive-theme-0.7.0.zip) ve
+[NocoDB eklentisi 1.4.0](vinyl-nocodb-plugin-1.4.0.zip). İkisini birlikte güncelleyin.
+
+Gerçek Format değerleri tekli için `LP`, ikili için `LP (2)`, Flexi için `Flaxy`,
+taş plak için `78` olarak eşlenir; Boxset, 10″ ve Single grupları korunur.
+Ana sayfadaki toplam ve yedi format göstergesi `/koleksiyon/` sayfasını ilgili filtreyle açar.
+Koleksiyonum sayfasında format, tür ve arama birlikte kullanılabilir. Tüm formatlar
+seçildiğinde tüm halka açık plaklar listelenir. Varsayılan sıra sanatçı A–Z'dir;
+Z–A ve alım ayına göre yeni/eski sıraları da seçilebilir. Temizle tüm filtreleri ve
+sıralamayı sıfırlar. Aynı alım ayı içindeki sıra sanatçı, ardından albüm adına göredir;
+alım ayı bilinmeyen kayıtlar her iki alım sıralamasında da sonda kalır.
+
+`Purchase_Date` için İngilizce ay ve iki basamaklı yıl desteklenir:
+`September 25` = Eylül 2025. İki basamaklı yıllar 2000–2099 olarak yorumlanır;
+`December 1999` gibi dört basamaklı yıl ve önceki ISO tarih biçimi de desteklenir.
+PHP bu değerlerden aylık toplamları ve göreli sıralama numarasını hesaplar; bireysel
+tarih veya ay alanı tarayıcıya gönderilmez. Yeni veri önbellek anahtarı ilk istekte
+eski format/tarih hesaplarını yeniler. NocoDB verileri ve şeması değiştirilmez.

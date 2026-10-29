@@ -90,3 +90,14 @@ ISO YYYY-MM-DD ve ISO zaman damgaları desteklenir. Eksik/geçersiz tarihler tab
 adetleri ayrı notta gösterilir. Aylık Toplam tüm formatları içerir, dört format sütunuyla sınırlı değildir.
 Geçmiş seçilen yıldan önceki bütün tarihli açık kayıtları kapsar. Gizli/boş ve yinelenen API ID'leri sayılmaz.
 WordPress yerel önbelleği ve toplu dashboard verisi güncellenir; NocoDB'ye yazma veya şema değişikliği yapılmaz.
+
+
+Güncelleme 1.4.0 (tema 0.7.0 ile birlikte)
+---------------------------------------
+Gerçek DB değerleri: LP, LP (2), Boxset, 10″, Single, 78 ve Flaxy.
+Purchase_Date artık September 25 gibi İngilizce ay/iki haneli yıl değerlerini okur.
+25 -> 2025; iki haneli yıllar 2000–2099'dur. Dört haneli yıl ve ISO biçimi de desteklenir.
+Sunucu aylık toplamları ve kayıtlara göreli ay sıralaması (purchaseOrder) ekler.
+Bu sıra tarih/ay kodu değildir; aynı ay aynı sıra değerini alır, bilinmeyen ay null'dır.
+Tekil Purchase_Date, Notes, fiyat ve özel attachment adresleri ziyaretçiye aktarılmaz.
+Koleksiyon ekranı bu sıralamayla yeni/eski sırası sağlar; aynı ay sanatçı/albüm sırasına döner.

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Vinyl Archive — NocoDB
  * Description: NocoDB v2 koleksiyonunu salt okunur biçimde VINYL ARCHIVE temasına bağlar.
- * Version: 1.3.0
+ * Version: 1.4.0
  * Requires at least: 6.5
  * Requires PHP: 8.1
  */
@@ -18,7 +18,7 @@ function va_nc_settings() {
 function va_nc_token() {
     return defined('VINYL_NOCODB_TOKEN') ? VINYL_NOCODB_TOKEN : get_option('va_nc_token', '');
 }
-function va_nc_key() { return 'va_nc_collection_v5'; }
+function va_nc_key() { return 'va_nc_collection_v6'; }
 function va_nc_fetch($refresh = false) {
     if (!$refresh) { $cached = get_transient(va_nc_key()); if (is_array($cached)) return $cached; }
     $settings = va_nc_settings();
@@ -26,6 +26,7 @@ function va_nc_fetch($refresh = false) {
     $public = array();
     $dashboard = array('years'=>array(), 'undated'=>0);
     $seen = array();
+    $purchase_months = array();
     $attachments = array();
     for ($offset = 0; $offset < 10000; $offset += 100) {
         $url = $settings['url'] . '/api/v2/tables/' . rawurlencode($settings['table']) . '/records?limit=100&offset=' . $offset;
@@ -53,10 +54,18 @@ function va_nc_fetch($refresh = false) {
                     $attachments[$cover_key] = $source;
                     $record['manualCoverKey'] = $cover_key;
                 }
+                $month = va_nc_purchase_month($row['Purchase_Date'] ?? '');
+                $purchase_months[] = $month === null ? null : $month[0] * 12 + $month[1];
                 $public[] = $record;
             }
         }
         if (count($body['list']) < 100 || ($body['pageInfo']['isLastPage'] ?? false) === true) {
+            // Only relative month ranks leave PHP; dates/month keys remain private.
+            $ordered = array_values(array_unique(array_filter($purchase_months, function ($v) { return $v !== null; })));
+            sort($ordered, SORT_NUMERIC);
+            $ranks = array_flip($ordered);
+            foreach ($public as $i => &$item) $item['purchaseOrder'] = $purchase_months[$i] === null ? null : $ranks[$purchase_months[$i]];
+            unset($item);
             update_option('va_nc_dashboard', $dashboard, false);
             update_option('va_nc_attachment_sources', $attachments, false);
             set_transient(va_nc_key(), $public, 5 * MINUTE_IN_SECONDS);

@@ -72,7 +72,7 @@ assert.equal(hd.querySelector('#single-feature').hidden,false);
 assert.equal(hd.querySelector('#featured-grid').querySelectorAll('[data-album]').length,1);
 assert.equal(hd.querySelector('#single-feature-grid').querySelectorAll('[data-album]').length,1);
 assert.equal(hd.querySelectorAll('#purchase-months tr').length,13);
-assert.ok(hd.querySelector('.stats a').href.endsWith('/imzali-plaklar/'));
+assert.ok(hd.querySelectorAll('.stats a')[8].href.endsWith('/imzali-plaklar/'));
 assert.ok(hd.querySelector('#featured .text-link').href.includes('format=lp'));
 assert.ok(hd.querySelector('#single-feature .text-link').href.includes('format=single'));
 const many=Array.from({length:16},(_,i)=>({...rows[0],artist:i<8?'Z':'A',album:'Album '+i,formatClass:i<12?'lp':'single'}));
@@ -101,7 +101,7 @@ assert.match(filtered.document.querySelector('#collection-grid').textContent,/Se
 const filteredSearch=filtered.document.querySelector('#search');filteredSearch.value='missing';filteredSearch.dispatchEvent(new filtered.Event('input'));
 assert.equal(filtered.document.querySelectorAll('#collection-grid [data-album]').length,0);
 filtered.document.querySelector('#clear').click();
-assert.equal(filtered.document.querySelectorAll('#collection-grid [data-album]').length,1);
+assert.equal(filtered.document.querySelectorAll('#collection-grid [data-album]').length,2);
 console.log('PASS: year selection, cumulative past, monthly columns and full-list format filtering with reset');
 const categories=['lp','double','boxset','ten','single','shellac','flexi'];
 const categoryRows=categories.map((formatClass,i)=>({...rows[0],artist:'Artist '+i,album:'Record '+i,formatClass,artistCountry:i%2?'Türkiye':'Fransa',genre:i%2?'Rock':'Jazz'}));
@@ -113,3 +113,27 @@ const emptyHome=render([],true,'home').window.document;
 assert.ok(emptyHome.querySelector('.demo').textContent.includes('yüklenemiyor'));
 assert.equal(emptyHome.querySelectorAll('#featured-grid [data-album]').length,0);
 console.log('PASS: exact format metric counts, distinct artist countries and genres, Top 10 limit, connection-error state');
+
+const sortableRows=[
+ {...rows[0],artist:'Z',album:'Old',purchaseOrder:0},
+ {...rows[0],artist:'B',album:'New B',purchaseOrder:1,formatClass:'double'},
+ {...rows[0],artist:'A',album:'New A',purchaseOrder:1},
+ {...rows[0],artist:'C',album:'Unknown',purchaseOrder:null},
+];
+const collectionWindow=render(sortableRows,false,'collection').window, collectionDoc=collectionWindow.document;
+const order=()=>[...collectionDoc.querySelectorAll('#collection-grid .album-card h3')].map(n=>n.textContent);
+assert.deepEqual(order(),['New A','New B','Unknown','Old']);
+const sortControl=collectionDoc.querySelector('#collection-sort');
+function sortBy(value){sortControl.value=value;sortControl.dispatchEvent(new collectionWindow.Event('change'));}
+sortBy('artist-desc');assert.deepEqual(order(),['Old','Unknown','New B','New A']);
+sortBy('purchase-desc');assert.deepEqual(order(),['New A','New B','Old','Unknown']);
+sortBy('purchase-asc');assert.deepEqual(order(),['Old','New A','New B','Unknown']);
+const formatControl=collectionDoc.querySelector('#format-filter');formatControl.value='double';formatControl.dispatchEvent(new collectionWindow.Event('change'));
+assert.deepEqual(order(),['New B']);
+formatControl.value='shellac';formatControl.dispatchEvent(new collectionWindow.Event('change'));assert.deepEqual(order(),[]);
+collectionDoc.querySelector('#clear').click();assert.equal(order().length,4);
+const dashboardLinks=[...hd.querySelectorAll('.stats a')];
+assert.equal(dashboardLinks.length,9);
+assert.equal(new URL(dashboardLinks[0].href).search,'');
+assert.deepEqual(dashboardLinks.slice(1,8).map(a=>new URL(a.href).searchParams.get('format')),['lp','double','boxset','ten','single','shellac','flexi']);
+console.log('PASS: collection alphabetical/month rank sorting, same-month ties, missing dates last, format controls/reset, all dashboard format links');
