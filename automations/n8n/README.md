@@ -1,6 +1,6 @@
-# VINYL — Discogs kapaklarını NocoDB’ye aktarma (1.0.1)
+# VINYL — Discogs kapaklarını NocoDB’ye aktarma (1.0.2)
 
-İçe aktarılabilir dosya: [vinyl-discogs-covers-1.0.1.json](vinyl-discogs-covers-1.0.1.json).
+İçe aktarılabilir dosya: [vinyl-discogs-covers-1.0.2.json](vinyl-discogs-covers-1.0.2.json).
 Akış elle başlatılır, varsayılan olarak **önizlemedir** (`dryRun: true`) ve en fazla **5 kayıt** işler.
 `Cover_Image` boş ve `Discogs_ID` geçerli olan kayıtları seçer. Sanatçı/albüm adıyla otomatik eşleştirme yapmaz.
 Şemayı değiştirmez. Yazma modu açıldığında yalnızca seçilen kaydın `Cover_Image` alanını günceller.
@@ -65,10 +65,21 @@ Düğümler HTTP Request 4.2, Code 2, Loop Over Items 3, If 2.2 ve Wait 1.1 sür
 `python3 automations/n8n/build-workflow.py` workflow JSON dosyasını yeniden üretir; n8n yalnız JSON’u içe aktarır.
 
 
-## 1.0.1 düzeltmesi
+## 1.0.2 düzeltmesi
 
 n8n Code sandbox'ında bulunmayan global `URL` bağımlılığı kaldırıldı. Hem Validate configuration
 hem Choose image düğümleri artık harici modül veya özel n8n ayarı gerektirmeyen sıkı adres
 kontrolleri kullanır. Testler de `URL` globali olmadan çalıştırılır. Önceki workflow'u durdurup
-1.0.1 JSON dosyasını yeni workflow olarak içe aktarın, credential seçimlerini yeniden yapın.
+1.0.2 JSON dosyasını yeni workflow olarak içe aktarın, credential seçimlerini yeniden yapın.
 `dryRun: true` ile başlatın; önizleme hâlâ varsayılandır.
+
+
+## 1.0.2 — sayfalama düzeltmesi
+
+Read collection düğümündeki offset parametresinin türü n8n'in beklediği `qs` olarak düzeltildi.
+Önceki `query` değeri offset'i URL sorgusuna aktarmıyor, aynı sayfanın tekrar okunmasına neden oluyordu.
+Mevcut workflow içinde de düzeltilebilir: Options → Pagination → Parameters altında offset satırının
+Type alanını **Query**, Name alanını `offset`, expression Value alanını `{{ $pageCount * 100 }}` yapın.
+Pagination Completed When **Other**, tamamlanma ifadesi
+`{{ $response.body.pageInfo?.isLastPage === true || $response.body.list.length < 100 }}` olmalıdır.
+Beş aynı yanıt korumasını kaldırmayın; sorun offset'in iletilmesiydi.

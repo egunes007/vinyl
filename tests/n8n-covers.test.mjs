@@ -3,7 +3,7 @@ import {runInNewContext} from 'node:vm';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const root=new URL('../automations/n8n/',import.meta.url);
-const workflow=JSON.parse(readFileSync(new URL('vinyl-discogs-covers-1.0.1.json',root)));
+const workflow=JSON.parse(readFileSync(new URL('vinyl-discogs-covers-1.0.2.json',root)));
 function run(name,json={},inputs=[{json}],refs={}) {
  const node=workflow.nodes.find(n=>n.name===name);
  const $=key=>({first:()=>({json:refs[key]}),item:{json:refs[key]}});
@@ -61,4 +61,17 @@ test('Code nodes validate URLs without the URL global available in n8n',()=>{
  for(const baseUrl of ['http://user:secret@host','https://host/path','https://host?token=x','https://host#x','http://host:70000','http://host:0','http://host\\evil','http://host\n','http://bad..host','file:///tmp'])assert.throws(()=>run('Validate configuration',{...config,baseUrl}),/origin/);
  const refs={'One record at a time':candidate};
  for(const uri of ['https://i.discogs.com:443/a','https://i.discogs.com/a#fragment','https://i.discogs.com/a\n','https://i.discogs.com\\evil/a'])assert.equal(run('Choose image',{statusCode:200,body:{images:[{uri}]}},undefined,refs)[0].json.status,'skipped');
+});
+
+test('pagination sends offset as n8n qs parameters and stops on the last NocoDB page',()=>{
+ const read=workflow.nodes.find(n=>n.name==='Read collection').parameters;
+ const pagination=read.options.pagination.pagination;
+ assert.equal(pagination.paginationMode,'updateAParameterInEachRequest');
+ const [parameter]=pagination.parameters.parameters;
+ assert.equal(parameter.type,'qs');assert.equal(parameter.name,'offset');
+ const evaluate=(expression,context)=>runInNewContext(expression.replace(/^=\{\{/, '').replace(/\}\}$/, ''),context);
+ assert.deepEqual([0,1,2,3].map($pageCount=>evaluate(parameter.value,{$pageCount})),[0,100,200,300]);
+ assert.equal(evaluate(pagination.completeExpression,{$response:{body:{list:Array(100),pageInfo:{isLastPage:false}}}}),false);
+ assert.equal(evaluate(pagination.completeExpression,{$response:{body:{list:Array(16)}}}),true);
+ assert.equal(evaluate(pagination.completeExpression,{$response:{body:{list:Array(100),pageInfo:{isLastPage:true}}}}),true);
 });
