@@ -121,3 +121,14 @@ Koleksiyonum ve İmzalı Plaklar menü, dashboard ve tam liste bağlantıları a
 `/?pagename=koleksiyon` ve `/?pagename=imzali-plaklar` adreslerini kullanır.
 Format, sanatçı ve tür parametreleri eklenirken pagename korunur. Bu iki sayfa için
 Apache mod_rewrite gerekmez. Eklenti 1.4.0 değişmeden kullanılabilir.
+
+
+## Hakkımda ve keşif sayfaları — tema 0.8.0
+
+Sanatçılar (`/?pagename=sanatcilar`), Türler (`/?pagename=turler`) ve Hakkımda
+(`/?pagename=hakkimda`) sayfaları artık yönetici paneli ilk açıldığında otomatik oluşturulur.
+Mevcut sayfalar korunur. Tür/sanatçı dizinleri alfabetiktir, arama ve plak adetleri içerir;
+bir öğeye tıklamak filtreli koleksiyonu açar. Çoklu türler ayrı ayrı listelenir.
+Hakkımda bölümü müziksever bir koleksiyoner anlatımıyla hazırlanmıştır.
+Pikap 0.7.3'e göre %20 küçültülmüş, üst bölüm boşlukları azaltılmıştır.
+Eklenti 1.4.0 kullanılmaya devam edilir.

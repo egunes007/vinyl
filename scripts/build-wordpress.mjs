@@ -6,9 +6,10 @@ const html = await readFile(new URL('index.html', root), 'utf8');
 let body = html.slice(html.indexOf('<div class="demo">'), html.indexOf('<script type="module"'));
 const routes = {home:'',collection:'koleksiyon',signed:'imzali-plaklar',artists:'sanatcilar',genres:'turler',about:'hakkimda'};
 for (const [anchor, slug] of Object.entries(routes)) {
- const path = ['collection','signed'].includes(anchor) ? '/?pagename='+slug : '/'+slug+(slug ? '/' : '');
+ const path = Boolean(slug) ? '/?pagename='+slug : '/'+slug+(slug ? '/' : '');
  body = body.replaceAll(`href="#${anchor}"`, `href="<?php echo esc_url(home_url('${path}')); ?>"`);
 }
+body = body.replace(/<section id="about"[^]*?<\/section>/, await readFile(new URL('scripts/wordpress-about.html', root), 'utf8'));
 body = body.replace('<main>', '<main id="main-content">');
 await writeFile(new URL('template-parts-archive.php', theme), `<?php defined('ABSPATH') || exit; ?>\n${body}`);
 await copyFile(new URL('src/style.css',root),new URL('assets/archive.css',theme));
@@ -29,8 +30,9 @@ const albums = (live ? payload.albums : demoAlbums).map((row, index) => {
 });
 const filterAlbums = (query='', genre='') => {
  const term=escapeHTML(query.trim().toLocaleLowerCase('tr-TR'));
- return albums.filter(a=>(!genre || a.genre===escapeHTML(genre)) && (a.artist+' '+a.album).toLocaleLowerCase('tr-TR').includes(term));
+ return albums.filter(a=>(!genre || a.genre.split(',').map(g=>g.trim()).includes(escapeHTML(genre))) && (a.artist+' '+a.album).toLocaleLowerCase('tr-TR').includes(term));
 };`);
+app = app.replace("const genres = [...new Set(albums.map(a=>a.genre))];", "const genres = [...new Set(albums.flatMap(a=>a.genre.split(',').map(g=>g.trim()).filter(Boolean)))].sort((a,b)=>a.localeCompare(b,'tr'));");
 app = app.replace("$('#featured-grid').innerHTML=albums.slice(0,4)", "$('#featured-grid').innerHTML=(live ? albums.filter(a=>a.featured).concat(albums.filter(a=>!a.featured)).slice(0,4) : albums.slice(0,4))");
 app = app.replace("const term = $('#signed-search').value.trim().toLocaleLowerCase('tr-TR');", "const term = escapeHTML($('#signed-search').value.trim().toLocaleLowerCase('tr-TR'));");
 app = app.replace('ÖZGÜN ÖRNEK KAPAK', "${live ? 'KAPAK GÖRSELİ YOK' : 'ÖZGÜN ÖRNEK KAPAK'}");

@@ -1,10 +1,10 @@
 <?php
-/** Create the two archive pages requested by the site owner; preserve existing pages. */
+/** Create the archive pages requested by the site owner; preserve existing pages. */
 defined('ABSPATH') || exit;
 function vinyl_archive_ensure_pages() {
     if (!current_user_can('manage_options')) return;
     $created = false;
-    foreach (array('koleksiyon'=>'Koleksiyonum', 'imzali-plaklar'=>'İmzalı Plaklar') as $slug=>$title) {
+    foreach (array('koleksiyon'=>'Koleksiyonum', 'imzali-plaklar'=>'İmzalı Plaklar', 'sanatcilar'=>'Sanatçılar', 'turler'=>'Türler', 'hakkimda'=>'Hakkımda') as $slug=>$title) {
         if (get_page_by_path($slug, OBJECT, 'page')) continue;
         $result = wp_insert_post(array(
             'post_type'=>'page', 'post_status'=>'publish', 'post_name'=>$slug,
@@ -19,7 +19,7 @@ function vinyl_archive_ensure_pages() {
     if ($created) flush_rewrite_rules(false);
 }
 function vinyl_archive_pages_error() {
-    echo '<div class="notice notice-error"><p>VINYL ARCHIVE: Arşiv sayfası oluşturulamadı. Sayfalar bölümünde Koleksiyonum (koleksiyon) ve İmzalı Plaklar (imzali-plaklar) adreslerini kontrol edin. Bir sonraki yönetici ziyaretinde yeniden denenecek.</p></div>';
+    echo '<div class="notice notice-error"><p>VINYL ARCHIVE: Arşiv sayfası oluşturulamadı. Sayfalar bölümünde Koleksiyonum, İmzalı Plaklar, Sanatçılar, Türler ve Hakkımda sayfalarını kontrol edin. Bir sonraki yönetici ziyaretinde yeniden denenecek.</p></div>';
 }
 add_action('after_switch_theme', 'vinyl_archive_ensure_pages');
 // Theme ZIP updates do not run after_switch_theme. Handle already-active installations too.

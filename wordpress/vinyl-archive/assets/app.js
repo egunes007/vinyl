@@ -27,12 +27,12 @@ const albums = (live ? payload.albums : demoAlbums).map((row, index) => {
 });
 const filterAlbums = (query='', genre='') => {
  const term=escapeHTML(query.trim().toLocaleLowerCase('tr-TR'));
- return albums.filter(a=>(!genre || a.genre===escapeHTML(genre)) && (a.artist+' '+a.album).toLocaleLowerCase('tr-TR').includes(term));
+ return albums.filter(a=>(!genre || a.genre.split(',').map(g=>g.trim()).includes(escapeHTML(genre))) && (a.artist+' '+a.album).toLocaleLowerCase('tr-TR').includes(term));
 };
 const $ = s => document.querySelector(s);
 const cover = a => discogsCover(a) || `<div class="cover ${a.cover}" style="--cover:${a.color}"><span class="cover-artist">${a.artist}</span><strong class="cover-art">${a.mark}</strong><span class="cover-title">${a.album}</span><span class="cover-disclaimer">${live ? 'KAPAK GÖRSELİ YOK' : 'ÖZGÜN ÖRNEK KAPAK'}</span></div>`;
 const card = a => `<article class="album-entry"><button class="album-card" data-album="${a.id}" aria-label="${a.artist} — ${a.album}, detayları aç"><div class="cover-wrap">${cover(a)}${a.signed?'<span class="signed-badge">✎ İmzalı' + (live ? '' : ' · Örnek') + '</span>':''}</div><div class="card-info"><span class="card-genre">${a.genre} <span>↗</span></span><h3>${a.album}</h3><p>${a.artist} <span>· ${a.year}</span></p></div></button>${a.discogsUrl ? '<a class="discogs-credit" href="'+a.discogsUrl+'" target="_blank" rel="noopener noreferrer">Discogs ↗</a>' : ''}</article>`;
-const genres = [...new Set(albums.map(a=>a.genre))];
+const genres = [...new Set(albums.flatMap(a=>a.genre.split(',').map(g=>g.trim()).filter(Boolean)))].sort((a,b)=>a.localeCompare(b,'tr'));
 $('#album-count').textContent=albums.length.toString().padStart(2,'0');
 $('#artist-count').textContent=new Set(albums.map(a=>a.artist)).size.toString().padStart(2,'0');
 $('#genre-count').textContent=genres.length.toString().padStart(2,'0');
@@ -196,6 +196,31 @@ if(view==='collection'){
  $('#clear').addEventListener('click',()=>{formatSelect.value='';sortSelect.value='artist-asc';renderCollection();});
  const note=document.createElement('p');note.className='muted';note.textContent='Alım sıralaması ay bazındadır. Aynı aydaki kayıtlar sanatçı ve albüm adına göre sıralanır; alım ayı eksik kayıtlar sonda gösterilir.';
  $('#result-count').before(note);renderCollection();
+}
+// Dedicated, searchable artist and genre directories use the public collection only.
+if(view==='artists'||view==='genres'){
+ const artistsView=view==='artists';
+ const section=document.querySelector(artistsView?'#artists':'#genres');
+ const grid=section.querySelector(artistsView?'#artist-grid':'#genre-grid');
+ const counts=new Map();
+ albums.forEach(album=>{
+  const names=artistsView?[album.artist]:album.genre.split(',').map(name=>name.trim());
+  [...new Set(names.filter(Boolean))].forEach(name=>counts.set(name,(counts.get(name)||0)+1));
+ });
+ const searchLabel=document.createElement('label');searchLabel.className='search directory-search';
+ searchLabel.textContent=artistsView?'Sanatçı ara':'Müzik türü ara';
+ const searchInput=document.createElement('input');searchInput.type='search';searchInput.id=artistsView?'artist-directory-search':'genre-directory-search';searchInput.setAttribute('aria-label',searchLabel.textContent);
+ searchInput.placeholder=artistsView?'Sanatçı adı…':'Müzik türü…';searchLabel.append(searchInput);grid.before(searchLabel);
+ const count=document.createElement('p');count.className='directory-count';count.setAttribute('aria-live','polite');grid.before(count);
+ const decode=value=>{const node=document.createElement('textarea');node.innerHTML=value;return node.value;};
+ const renderDirectory=()=>{
+  const query=searchInput.value.trim().toLocaleLowerCase('tr-TR');
+  const entries=[...counts].filter(([name])=>decode(name).toLocaleLowerCase('tr-TR').includes(query)).sort((a,b)=>decode(a[0]).localeCompare(decode(b[0]),'tr'));
+  grid.innerHTML=entries.map(([name,n],index)=>artistsView?`<button class="artist" data-artist="${name}"><span>${name}</span><span>${n} plak ↗</span></button>`:`<button class="genre-tile" data-genre="${name}"><span class="genre-number">${index+1} /</span><strong>${name}</strong><span>${n} plak <b>↗</b></span></button>`).join('');
+  if(!entries.length)grid.textContent=payload?.error?'Koleksiyon bağlantısı şu anda kullanılamıyor.':'Bu aramaya uygun sonuç bulunamadı.';
+  count.textContent=`${entries.length} ${artistsView?'sanatçı':'müzik türü'}`;
+ };
+ searchInput.addEventListener('input',renderDirectory);renderDirectory();
 }
 const homeSections=['home','dashboard-reports','featured','single-feature','signed-feature'];
 document.querySelectorAll('main > section').forEach(section=>section.hidden=view==='home' ? !(homeSections.includes(section.id)||section===statsNode) : section.id!==(views[view]||view));

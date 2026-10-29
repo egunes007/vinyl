@@ -7,5 +7,7 @@
 #collection .filters{flex-wrap:wrap}#collection .filters select{max-width:100%;min-width:145px}@media(max-width:650px){#collection .filters select{width:100%}}
 
 /* Size the hero illustration in layout so the dashboard moves up too. */
-.hero .turntable{width:90%;justify-self:center}
-@media(max-width:700px){.hero .turntable{width:76.5%;max-width:360px}}
+.hero .turntable{width:72%;justify-self:center}
+@media(max-width:700px){.hero .turntable{width:61.2%;max-width:288px}}
+
+.directory-search{display:block;max-width:650px;margin:24px 0}.directory-count{color:var(--muted);font-size:12px}.about .about-story p{line-height:1.9;max-width:680px}.hero{padding-top:60px}.hero-bottom{margin-top:20px}@media(max-width:700px){.hero{padding-top:32px}}

@@ -10,10 +10,10 @@ function vinyl_archive_setup() {
 add_action('after_setup_theme', 'vinyl_archive_setup');
 function vinyl_archive_assets() {
     $uri = get_template_directory_uri();
-    wp_enqueue_style('vinyl-archive', $uri . '/assets/archive.css', array(), '0.7.3');
-    wp_enqueue_style('vinyl-wordpress', $uri . '/assets/wordpress.css', array('vinyl-archive'), '0.7.3');
+    wp_enqueue_style('vinyl-archive', $uri . '/assets/archive.css', array(), '0.8.0');
+    wp_enqueue_style('vinyl-wordpress', $uri . '/assets/wordpress.css', array('vinyl-archive'), '0.8.0');
     if (vinyl_archive_view() !== 'content') {
-        wp_enqueue_script_module('vinyl-archive', $uri . '/assets/app.js', array(), '0.7.3');
+        wp_enqueue_script_module('vinyl-archive', $uri . '/assets/app.js', array(), '0.8.0');
     }
 }
 add_action('wp_enqueue_scripts', 'vinyl_archive_assets');

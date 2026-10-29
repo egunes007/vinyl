@@ -9,8 +9,8 @@ test('WordPress yaşam döngüsü kancaları ve güvenli sayfa bağlantıları',
  assert.match(await read('footer.php'), /wp_footer\(\)/);
  assert.match(await read('functions.php'), /wp_enqueue_script_module/);
  const body = await read('template-parts-archive.php');
- for (const slug of ['sanatcilar','turler','hakkimda']) assert.ok(body.includes(`esc_url(home_url('/${slug}/'))`));
- for(const slug of ['koleksiyon','imzali-plaklar'])assert.ok(body.includes(`esc_url(home_url('/?pagename=${slug}'))`));
+
+ for(const slug of ['koleksiyon','imzali-plaklar','sanatcilar','turler','hakkimda'])assert.ok(body.includes(`esc_url(home_url('/?pagename=${slug}'))`));
  assert.ok(header.includes("home_url('/?pagename=koleksiyon')"));
  assert.ok(!body.includes('href="#signed"'));
  assert.match(body,/class="turntable"/);
