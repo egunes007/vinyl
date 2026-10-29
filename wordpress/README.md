@@ -102,3 +102,14 @@ alım ayı bilinmeyen kayıtlar her iki alım sıralamasında da sonda kalır.
 PHP bu değerlerden aylık toplamları ve göreli sıralama numarasını hesaplar; bireysel
 tarih veya ay alanı tarayıcıya gönderilmez. Yeni veri önbellek anahtarı ilk istekte
 eski format/tarih hesaplarını yeniler. NocoDB verileri ve şeması değiştirilmez.
+
+
+## Otomatik arşiv sayfaları — tema 0.7.1
+
+Tema etkinleştirildiğinde veya güncellemeden sonra bir yönetici WordPress panelini açtığında,
+eksik `koleksiyon` (Koleksiyonum) ve `imzali-plaklar` (İmzalı Plaklar) sayfaları yayımlanarak
+oluşturulur. Mevcut sayfalara, içeriklerine ve yayın durumlarına dokunulmaz. Yeni sayfa oluşturulduğunda
+kalıcı bağlantı kuralları yenilenir; tekrar ziyaretlerde sayfalar çoğaltılmaz. Taslak/özel mevcut
+sayfa varsa halka açmak için Sayfalar bölümünden kendiniz yayımlayın. Ana sayfa ve okuma ayarları değişmez.
+Tema 0.7.1 ZIP'ini yükleyip etkinleştirin ve **Yönetim Paneli**ni bir kez açın;
+ardından `/koleksiyon/` ve `/imzali-plaklar/` adreslerini ziyaret edin. Eklenti 1.4.0 ile uyumludur.
