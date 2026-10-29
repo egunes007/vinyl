@@ -113,3 +113,11 @@ kalıcı bağlantı kuralları yenilenir; tekrar ziyaretlerde sayfalar çoğalt�
 sayfa varsa halka açmak için Sayfalar bölümünden kendiniz yayımlayın. Ana sayfa ve okuma ayarları değişmez.
 Tema 0.7.1 ZIP'ini yükleyip etkinleştirin ve **Yönetim Paneli**ni bir kez açın;
 ardından `/koleksiyon/` ve `/imzali-plaklar/` adreslerini ziyaret edin. Eklenti 1.4.0 ile uyumludur.
+
+
+## Apache yönlendirmesiz bağlantılar — tema 0.7.2
+
+Koleksiyonum ve İmzalı Plaklar menü, dashboard ve tam liste bağlantıları artık
+`/?pagename=koleksiyon` ve `/?pagename=imzali-plaklar` adreslerini kullanır.
+Format, sanatçı ve tür parametreleri eklenirken pagename korunur. Bu iki sayfa için
+Apache mod_rewrite gerekmez. Eklenti 1.4.0 değişmeden kullanılabilir.

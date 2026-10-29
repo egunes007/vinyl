@@ -9,7 +9,7 @@ const rows=[{artist:'A & B',album:'<img src=x onerror="alert(1)">',genre:'Rock &
 function render(albums,error=false,view='collection',dashboard={years:{},undated:0},query=''){
  const dom=new JSDOM(html,{url:'https://example.test/'+query,runScripts:'outside-only'});
  const {document}=dom.window;
- document.body.dataset.archiveView=view;document.body.dataset.collectionUrl='https://example.test/koleksiyon/';
+ document.body.dataset.archiveView=view;document.body.dataset.collectionUrl='https://example.test/?pagename=koleksiyon';
  const node=document.createElement('script');node.id='vinyl-collection-data';node.type='application/json';node.textContent=JSON.stringify({live:true,albums,error,dashboard});document.head.append(node);
  document.querySelector('#album-dialog').showModal=function(){this.open=true;};
  document.querySelector('#album-dialog').close=function(){this.open=false;};
@@ -72,7 +72,7 @@ assert.equal(hd.querySelector('#single-feature').hidden,false);
 assert.equal(hd.querySelector('#featured-grid').querySelectorAll('[data-album]').length,1);
 assert.equal(hd.querySelector('#single-feature-grid').querySelectorAll('[data-album]').length,1);
 assert.equal(hd.querySelectorAll('#purchase-months tr').length,13);
-assert.ok(hd.querySelectorAll('.stats a')[8].href.endsWith('/imzali-plaklar/'));
+assert.ok(hd.querySelectorAll('.stats a')[8].href.endsWith('/?pagename=imzali-plaklar'));
 assert.ok(hd.querySelector('#featured .text-link').href.includes('format=lp'));
 assert.ok(hd.querySelector('#single-feature .text-link').href.includes('format=single'));
 const many=Array.from({length:16},(_,i)=>({...rows[0],artist:i<8?'Z':'A',album:'Album '+i,formatClass:i<12?'lp':'single'}));
@@ -134,6 +134,13 @@ formatControl.value='shellac';formatControl.dispatchEvent(new collectionWindow.E
 collectionDoc.querySelector('#clear').click();assert.equal(order().length,4);
 const dashboardLinks=[...hd.querySelectorAll('.stats a')];
 assert.equal(dashboardLinks.length,9);
-assert.equal(new URL(dashboardLinks[0].href).search,'');
+assert.equal(new URL(dashboardLinks[0].href).search,'?pagename=koleksiyon');
+assert.ok(dashboardLinks.slice(0,8).every(a=>new URL(a.href).searchParams.get('pagename')==='koleksiyon'));
+assert.equal(new URL(hd.querySelector('#featured .text-link').href).searchParams.get('pagename'),'koleksiyon');
 assert.deepEqual(dashboardLinks.slice(1,8).map(a=>new URL(a.href).searchParams.get('format')),['lp','double','boxset','ten','single','shellac','flexi']);
 console.log('PASS: collection alphabetical/month rank sorting, same-month ties, missing dates last, format controls/reset, all dashboard format links');
+
+const queryNav=render(rows,false,'signed',undefined,'?pagename=imzali-plaklar').window.document;
+assert.equal(queryNav.querySelectorAll('nav a[aria-current="page"]').length,1);
+assert.equal(new URL(queryNav.querySelector('nav a[aria-current="page"]').href).searchParams.get('pagename'),'imzali-plaklar');
+console.log('PASS: query-based navigation keeps page and format parameters and highlights only the active page');

@@ -6,7 +6,8 @@ const html = await readFile(new URL('index.html', root), 'utf8');
 let body = html.slice(html.indexOf('<div class="demo">'), html.indexOf('<script type="module"'));
 const routes = {home:'',collection:'koleksiyon',signed:'imzali-plaklar',artists:'sanatcilar',genres:'turler',about:'hakkimda'};
 for (const [anchor, slug] of Object.entries(routes)) {
- body = body.replaceAll(`href="#${anchor}"`, `href="<?php echo esc_url(home_url('/${slug}${slug ? '/' : ''}')); ?>"`);
+ const path = ['collection','signed'].includes(anchor) ? '/?pagename='+slug : '/'+slug+(slug ? '/' : '');
+ body = body.replaceAll(`href="#${anchor}"`, `href="<?php echo esc_url(home_url('${path}')); ?>"`);
 }
 body = body.replace('<main>', '<main id="main-content">');
 await writeFile(new URL('template-parts-archive.php', theme), `<?php defined('ABSPATH') || exit; ?>\n${body}`);
@@ -64,7 +65,7 @@ $('#search').value = params.get('artist') || '';
 const requestedGenre = params.get('genre');
 if (requestedGenre && genres.includes(escapeHTML(requestedGenre))) $('#genre-filter').value = requestedGenre;
 render();
-document.querySelectorAll('nav a').forEach(a => {if(new URL(a.href).pathname===location.pathname)a.setAttribute('aria-current','page');});
+document.querySelectorAll('nav a').forEach(a => {const url=new URL(a.href);if(url.pathname===location.pathname && url.searchParams.get('pagename')===params.get('pagename'))a.setAttribute('aria-current','page');});
 document.addEventListener('error', event => {
  const image = event.target;
  if (!(image instanceof HTMLImageElement) || !image.hasAttribute('data-cover-id')) return;

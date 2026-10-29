@@ -77,7 +77,7 @@ $('#search').value = params.get('artist') || '';
 const requestedGenre = params.get('genre');
 if (requestedGenre && genres.includes(escapeHTML(requestedGenre))) $('#genre-filter').value = requestedGenre;
 render();
-document.querySelectorAll('nav a').forEach(a => {if(new URL(a.href).pathname===location.pathname)a.setAttribute('aria-current','page');});
+document.querySelectorAll('nav a').forEach(a => {const url=new URL(a.href);if(url.pathname===location.pathname && url.searchParams.get('pagename')===params.get('pagename'))a.setAttribute('aria-current','page');});
 document.addEventListener('error', event => {
  const image = event.target;
  if (!(image instanceof HTMLImageElement) || !image.hasAttribute('data-cover-id')) return;
