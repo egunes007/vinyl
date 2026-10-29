@@ -1,6 +1,6 @@
-# VINYL — Discogs kapaklarını NocoDB’ye aktarma (1.0.0)
+# VINYL — Discogs kapaklarını NocoDB’ye aktarma (1.0.1)
 
-İçe aktarılabilir dosya: [vinyl-discogs-covers-1.0.0.json](vinyl-discogs-covers-1.0.0.json).
+İçe aktarılabilir dosya: [vinyl-discogs-covers-1.0.1.json](vinyl-discogs-covers-1.0.1.json).
 Akış elle başlatılır, varsayılan olarak **önizlemedir** (`dryRun: true`) ve en fazla **5 kayıt** işler.
 `Cover_Image` boş ve `Discogs_ID` geçerli olan kayıtları seçer. Sanatçı/albüm adıyla otomatik eşleştirme yapmaz.
 Şemayı değiştirmez. Yazma modu açıldığında yalnızca seçilen kaydın `Cover_Image` alanını günceller.
@@ -63,3 +63,12 @@ karşılaştırılmıştır. Bu ortamdan n8n/CasaOS’a bağlantı yok; **n8n’
 attachment yükleme henüz doğrulanmadı**. n8n ve NocoDB sürümlerine bağlı olarak düğüm/API uyarlaması gerekebilir.
 Düğümler HTTP Request 4.2, Code 2, Loop Over Items 3, If 2.2 ve Wait 1.1 sürümlerini kullanır.
 `python3 automations/n8n/build-workflow.py` workflow JSON dosyasını yeniden üretir; n8n yalnız JSON’u içe aktarır.
+
+
+## 1.0.1 düzeltmesi
+
+n8n Code sandbox'ında bulunmayan global `URL` bağımlılığı kaldırıldı. Hem Validate configuration
+hem Choose image düğümleri artık harici modül veya özel n8n ayarı gerektirmeyen sıkı adres
+kontrolleri kullanır. Testler de `URL` globali olmadan çalıştırılır. Önceki workflow'u durdurup
+1.0.1 JSON dosyasını yeni workflow olarak içe aktarın, credential seçimlerini yeniden yapın.
+`dryRun: true` ile başlatın; önizleme hâlâ varsayılandır.

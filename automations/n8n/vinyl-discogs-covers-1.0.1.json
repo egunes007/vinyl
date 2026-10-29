@@ -1,0 +1,715 @@
+{
+  "name": "VINYL — Discogs kapaklarını NocoDB’ye aktar v1.0.1",
+  "nodes": [
+    {
+      "id": "manual-start",
+      "name": "Manual start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "configuration",
+      "name": "Configuration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return [{json:{baseUrl:'http://192.168.1.13:8080',tableId:'m4z9hmr4f6ylz8m',dryRun:true,maxRecords:5}}];"
+      }
+    },
+    {
+      "id": "validate-configuration",
+      "name": "Validate configuration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const c=$json;\nconst base=typeof c.baseUrl==='string'?c.baseUrl:'';\nconst match=/^(https?):\\/\\/([a-z0-9.-]+)(?::([0-9]{1,5}))?\\/?$/i.exec(base);\nif(!match||/[\\s\\\\]/.test(base)||!match[2].split('.').every(label=>/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label))||(match[3]&&(Number(match[3])<1||Number(match[3])>65535)))throw new Error('NocoDB baseUrl must be an HTTP(S) origin without a path');\nif(!/^[A-Za-z0-9_-]+$/.test(c.tableId)||!Number.isInteger(c.maxRecords)||c.maxRecords<1||c.maxRecords>1000||typeof c.dryRun!=='boolean')throw new Error('Invalid configuration');\nreturn [{json:{...c,baseUrl:base.replace(/\\/$/,'')}}];"
+      }
+    },
+    {
+      "id": "read-collection",
+      "name": "Read collection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "url": "={{ $json.baseUrl + '/api/v2/tables/' + $json.tableId + '/records' }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "fields",
+              "value": "Id,Artist,Album,Discogs_ID,Cover_Image"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "query",
+                    "name": "offset",
+                    "value": "={{ $pageCount * 100 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ $response.body.pageInfo?.isLastPage === true || $response.body.list.length < 100 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 100,
+              "requestInterval": 300
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "NocoDB"
+        }
+      }
+    },
+    {
+      "id": "select-candidates",
+      "name": "Select candidates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const pages=$input.all().map(i=>i.json);\nif(!pages.length||pages.some(p=>!Array.isArray(p.list)))throw new Error('Invalid NocoDB v2 list');\nconst last=pages.at(-1);if(last.list.length>=100&&last.pageInfo?.isLastPage!==true)throw new Error('Pagination limit reached; no updates made');\nconst config=$('Validate configuration').first().json;\nconst empty=v=>v==null||v===''||(Array.isArray(v)&&v.length===0)||(typeof v==='string'&&/^\\s*\\[\\s*\\]\\s*$/.test(v));\nconst seen=new Set(), selected=[];let scanned=0;\nfor(const row of pages.flatMap(p=>p.list)){\n const id=row.Id;if(id==null||!/^\\d+$/.test(String(id)))continue;\n if(seen.has(String(id)))continue;seen.add(String(id));scanned++;\n if(!empty(row.Cover_Image)||! /^[1-9]\\d{0,11}$/.test(String(row.Discogs_ID??'').trim()))continue;\n selected.push({recordId:id,artist:String(row.Artist??''),album:String(row.Album??''),releaseId:String(row.Discogs_ID).trim()});\n}\nreturn selected.slice(0,config.maxRecords).map(item=>({json:{...config,...item,scanned,eligible:selected.length}}));"
+      }
+    },
+    {
+      "id": "one-record-at-a-time",
+      "name": "One record at a time",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1300,
+        0
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "pace-discogs-requests",
+      "name": "Pace Discogs requests",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "webhookId": "vinyl-cover-pacing"
+    },
+    {
+      "id": "discogs-release",
+      "name": "Discogs release",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        300
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "url": "={{ 'https://api.discogs.com/releases/' + $json.releaseId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "VinylArchiveN8N/1.0 +https://github.com/egunes007/vinyl"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Discogs"
+        }
+      }
+    },
+    {
+      "id": "choose-image",
+      "name": "Choose image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const item=$('One record at a time').item.json;\nconst response=$json;\nif([401,403,429].includes(response.statusCode))throw new Error('Discogs access/rate limit: '+response.statusCode+'. Stop and retry later.');\nif(response.statusCode!==200)return [{json:{...item,status:'skipped',reason:'Discogs HTTP '+response.statusCode},pairedItem:{item:0}}];\nconst images=response.body?.images||[];\nconst image=images.find(i=>i.type==='primary')||images[0];\nconst uri=image?.uri;\nif(typeof uri!=='string'||/[\\s\\\\]/.test(uri)||!/^https:\\/\\/(?:i|img)\\.discogs\\.com\\/[^#]+$/i.test(uri))return [{json:{...item,status:'skipped',reason:'No permitted cover image'},pairedItem:{item:0}}];\nreturn [{json:{...item,status:'candidate',coverUrl:uri},pairedItem:{item:0}}];"
+      }
+    },
+    {
+      "id": "has-image",
+      "name": "Has image",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        780,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Has image",
+              "leftValue": "={{ $json.status === 'candidate' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "preview-only",
+      "name": "Preview only",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Preview only",
+              "leftValue": "={{ $json.dryRun }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "preview-result",
+      "name": "Preview result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        300
+      ],
+      "parameters": {
+        "jsCode": "return [{json:{recordId:$json.recordId,artist:$json.artist,album:$json.album,releaseId:$json.releaseId,status:'preview',message:'Cover found; no NocoDB upload or update performed'}}];"
+      }
+    },
+    {
+      "id": "upload-image-to-nocodb",
+      "name": "Upload image to NocoDB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        600
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "={{ $json.baseUrl + '/api/v2/storage/upload-by-url' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ [{url:$json.coverUrl,fileName:'discogs-'+$json.releaseId+'.jpg'}] }}",
+        "options": {
+          "timeout": 60000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "NocoDB"
+        }
+      }
+    },
+    {
+      "id": "validate-upload",
+      "name": "Validate upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        600
+      ],
+      "parameters": {
+        "jsCode": "const item=$('Choose image').item.json;\nconst attachments=$input.all().flatMap(i=>Array.isArray(i.json)?i.json:[i.json]);\nif(!attachments.length||attachments.some(a=>typeof a!=='object'||!a.title||!(a.path||a.url||a.signedUrl)|| (a.size!=null && (!Number.isFinite(Number(a.size)) || Number(a.size)<=0 || Number(a.size)>8*1024*1024)) || (a.mimetype && !['image/jpeg','image/png','image/webp','image/gif'].includes(a.mimetype))))throw new Error('Unexpected upload response; record unchanged');\nreturn [{json:{...item,attachments},pairedItem:{item:0}}];"
+      }
+    },
+    {
+      "id": "recheck-empty-cover",
+      "name": "Recheck empty cover",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        600
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "url": "={{ $json.baseUrl + '/api/v2/tables/' + $json.tableId + '/records/' + $json.recordId }}",
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "NocoDB"
+        }
+      }
+    },
+    {
+      "id": "protect-existing-cover",
+      "name": "Protect existing cover",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        600
+      ],
+      "parameters": {
+        "jsCode": "const item=$('Validate upload').item.json;\nconst row=$json;\nif(String(row.Id)!==String(item.recordId))throw new Error('Recheck returned wrong record');\nconst v=row.Cover_Image;\nconst empty=v==null||v===''||(Array.isArray(v)&&v.length===0)||(typeof v==='string'&&/^\\s*\\[\\s*\\]\\s*$/.test(v));\nreturn [{json:{...item,mayUpdate:empty&&String(row.Discogs_ID??'').trim()===item.releaseId,status:empty?'ready':'skipped',reason:empty?'':'Cover was added by another process'},pairedItem:{item:0}}];"
+      }
+    },
+    {
+      "id": "still-empty",
+      "name": "Still empty",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        600
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Still empty",
+              "leftValue": "={{ $json.mayUpdate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "attach-cover",
+      "name": "Attach cover",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        600
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "PATCH",
+        "url": "={{ $json.baseUrl + '/api/v2/tables/' + $json.tableId + '/records' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ [{Id:$json.recordId,Cover_Image:$json.attachments}] }}",
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "NocoDB"
+        }
+      }
+    },
+    {
+      "id": "updated-result",
+      "name": "Updated result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        900
+      ],
+      "parameters": {
+        "jsCode": "const item=$('Protect existing cover').item.json;\nreturn [{json:{recordId:item.recordId,artist:item.artist,album:item.album,releaseId:item.releaseId,status:'updated'},pairedItem:{item:0}}];"
+      }
+    },
+    {
+      "id": "completed",
+      "name": "Completed",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        260,
+        900
+      ],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Manual start": {
+      "main": [
+        [
+          {
+            "node": "Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuration": {
+      "main": [
+        [
+          {
+            "node": "Validate configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate configuration": {
+      "main": [
+        [
+          {
+            "node": "Read collection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read collection": {
+      "main": [
+        [
+          {
+            "node": "Select candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select candidates": {
+      "main": [
+        [
+          {
+            "node": "One record at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pace Discogs requests": {
+      "main": [
+        [
+          {
+            "node": "Discogs release",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discogs release": {
+      "main": [
+        [
+          {
+            "node": "Choose image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose image": {
+      "main": [
+        [
+          {
+            "node": "Has image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preview result": {
+      "main": [
+        [
+          {
+            "node": "One record at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload image to NocoDB": {
+      "main": [
+        [
+          {
+            "node": "Validate upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate upload": {
+      "main": [
+        [
+          {
+            "node": "Recheck empty cover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recheck empty cover": {
+      "main": [
+        [
+          {
+            "node": "Protect existing cover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Protect existing cover": {
+      "main": [
+        [
+          {
+            "node": "Still empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach cover": {
+      "main": [
+        [
+          {
+            "node": "Updated result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Updated result": {
+      "main": [
+        [
+          {
+            "node": "One record at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One record at a time": {
+      "main": [
+        [
+          {
+            "node": "Completed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pace Discogs requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has image": {
+      "main": [
+        [
+          {
+            "node": "Preview only",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "One record at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preview only": {
+      "main": [
+        [
+          {
+            "node": "Preview result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upload image to NocoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still empty": {
+      "main": [
+        [
+          {
+            "node": "Attach cover",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "One record at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "pinData": {},
+  "tags": []
+}

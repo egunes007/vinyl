@@ -1,12 +1,13 @@
 import test from 'node:test';
+import {runInNewContext} from 'node:vm';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const root=new URL('../automations/n8n/',import.meta.url);
-const workflow=JSON.parse(readFileSync(new URL('vinyl-discogs-covers-1.0.0.json',root)));
+const workflow=JSON.parse(readFileSync(new URL('vinyl-discogs-covers-1.0.1.json',root)));
 function run(name,json={},inputs=[{json}],refs={}) {
  const node=workflow.nodes.find(n=>n.name===name);
  const $=key=>({first:()=>({json:refs[key]}),item:{json:refs[key]}});
- return new Function('$json','$input','$','URL',node.parameters.jsCode)(json,{all:()=>inputs},$,URL);
+ return structuredClone(runInNewContext('(function(){'+node.parameters.jsCode+'})()',{$json:json,$input:{all:()=>inputs},$,URL:undefined},{timeout:1000}));
 }
 const config={baseUrl:'http://nocodb:8080',tableId:'table123',dryRun:true,maxRecords:5};
 const candidate={...config,recordId:1,releaseId:'123',artist:'A',album:'B'};
@@ -52,4 +53,12 @@ test('recheck protects covers and changed releases, update scope remains one att
  assert.equal(patch.method,'PATCH');
  assert.match(patch.jsonBody,/\[\{Id:\$json.recordId,Cover_Image:\$json.attachments\}\]/);
  assert.throws(()=>run('Validate upload',{},[{json:{error:'failed'}}],{'Choose image':candidate}),/Unexpected upload/);
+});
+
+test('Code nodes validate URLs without the URL global available in n8n',()=>{
+ assert.equal(run('Validate configuration',config)[0].json.baseUrl,config.baseUrl);
+ assert.equal(run('Validate configuration',{...config,baseUrl:'http://192.168.1.13:8080/'})[0].json.baseUrl,'http://192.168.1.13:8080');
+ for(const baseUrl of ['http://user:secret@host','https://host/path','https://host?token=x','https://host#x','http://host:70000','http://host:0','http://host\\evil','http://host\n','http://bad..host','file:///tmp'])assert.throws(()=>run('Validate configuration',{...config,baseUrl}),/origin/);
+ const refs={'One record at a time':candidate};
+ for(const uri of ['https://i.discogs.com:443/a','https://i.discogs.com/a#fragment','https://i.discogs.com/a\n','https://i.discogs.com\\evil/a'])assert.equal(run('Choose image',{statusCode:200,body:{images:[{uri}]}},undefined,refs)[0].json.status,'skipped');
 });
