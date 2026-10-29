@@ -3,11 +3,11 @@ import {runInNewContext} from 'node:vm';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const root=new URL('../automations/n8n/',import.meta.url);
-const workflow=JSON.parse(readFileSync(new URL('vinyl-discogs-covers-1.0.2.json',root)));
+const workflow=JSON.parse(readFileSync(new URL('vinyl-discogs-covers-1.0.3.json',root)));
 function run(name,json={},inputs=[{json}],refs={}) {
  const node=workflow.nodes.find(n=>n.name===name);
  const $=key=>({first:()=>({json:refs[key]}),item:{json:refs[key]}});
- return structuredClone(runInNewContext('(function(){'+node.parameters.jsCode+'})()',{$json:json,$input:{all:()=>inputs},$,URL:undefined},{timeout:1000}));
+ return structuredClone(runInNewContext('(function(){'+node.parameters.jsCode+'})()',{$json:json,$input:{all:()=>inputs,first:()=>inputs[0]},$,URL:undefined},{timeout:1000}));
 }
 const config={baseUrl:'http://nocodb:8080',tableId:'table123',dryRun:true,maxRecords:5};
 const candidate={...config,recordId:1,releaseId:'123',artist:'A',album:'B'};
@@ -20,9 +20,10 @@ test('workflow is inactive, preview by default, credential values absent, links 
   assert.ok(names.has(source));for(const branch of outputs.main)for(const target of branch)assert.ok(names.has(target.node));
  }
  const http=workflow.nodes.filter(n=>n.type==='n8n-nodes-base.httpRequest');
- assert.ok(http.every(n=>n.parameters.authentication==='genericCredentialType'));
+ assert.ok(http.filter(n=>n.name!=='Download cover').every(n=>n.parameters.authentication==='genericCredentialType'));
+ assert.equal(http.find(n=>n.name==='Download cover').parameters.authentication,'none');
  assert.equal(http.find(n=>n.name==='Discogs release').credentials.httpHeaderAuth.name,'Discogs');
- assert.ok(http.filter(n=>n.name!=='Discogs release').every(n=>n.credentials.httpHeaderAuth.name==='NocoDB'));
+ assert.ok(http.filter(n=>!['Discogs release','Download cover'].includes(n.name)).every(n=>n.credentials.httpHeaderAuth.name==='NocoDB'));
  assert.equal(workflow.connections['Preview only'].main[0][0].node,'Preview result');
  assert.equal(workflow.connections['Preview result'].main[0][0].node,'One record at a time');
 });
@@ -74,4 +75,18 @@ test('pagination sends offset as n8n qs parameters and stops on the last NocoDB 
  assert.equal(evaluate(pagination.completeExpression,{$response:{body:{list:Array(100),pageInfo:{isLastPage:false}}}}),false);
  assert.equal(evaluate(pagination.completeExpression,{$response:{body:{list:Array(16)}}}),true);
  assert.equal(evaluate(pagination.completeExpression,{$response:{body:{list:Array(100),pageInfo:{isLastPage:true}}}}),true);
+});
+
+test('binary download and multipart upload avoid NocoDB remote fetching without forwarding credentials',()=>{
+ const download=workflow.nodes.find(n=>n.name==='Download cover');
+ assert.equal(download.credentials,undefined);
+ assert.equal(download.parameters.options.response.response.responseFormat,'file');
+ assert.equal(download.parameters.options.redirect.redirect.followRedirects,false);
+ const prepared=run('Prepare image file',{},[{json:{},binary:{data:{mimeType:'image/png',data:'binary-reference'}}}],{'Choose image':candidate})[0];
+ assert.equal(prepared.binary.data.fileName,'discogs-123.png');assert.equal(prepared.binary.data.data,'binary-reference');
+ assert.throws(()=>run('Prepare image file',{},[{json:{},binary:{data:{mimeType:'text/html'}}}],{'Choose image':candidate}),/not a supported image/);
+ const upload=workflow.nodes.find(n=>n.name==='Upload image to NocoDB').parameters;
+ assert.equal(upload.contentType,'multipart-form-data');assert.match(upload.url,/storage\/upload'/);
+ assert.deepEqual(upload.bodyParameters.parameters,[{parameterType:'formBinaryData',name:'files',inputDataFieldName:'data'}]);
+ assert.equal(workflow.connections['Preview only'].main[1][0].node,'Download cover');
 });

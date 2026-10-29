@@ -52,7 +52,15 @@ return [{json:{...item,status:'candidate',coverUrl:uri},pairedItem:{item:0}}];""
 condition('Has image',"={{ $json.status === 'candidate' }}")
 condition('Preview only',"={{ $json.dryRun }}")
 code('Preview result',"""return [{json:{recordId:$json.recordId,artist:$json.artist,album:$json.album,releaseId:$json.releaseId,status:'preview',message:'Cover found; no NocoDB upload or update performed'}}];""")
-http('Upload image to NocoDB',{'method':'POST','url':"={{ $json.baseUrl + '/api/v2/storage/upload-by-url' }}",'sendBody':True,'specifyBody':'json','jsonBody':"={{ [{url:$json.coverUrl,fileName:'discogs-'+$json.releaseId+'.jpg'}] }}",'options':{'timeout':60000,'redirect':{'redirect':{'followRedirects':False}}}})
+node('Download cover','httpRequest',{'url':'={{ $json.coverUrl }}','authentication':'none','sendHeaders':True,'headerParameters':{'parameters':[{'name':'User-Agent','value':'VinylArchiveN8N/1.0 +https://github.com/egunes007/vinyl'}]},'options':{'timeout':60000,'redirect':{'redirect':{'followRedirects':False}},'response':{'response':{'responseFormat':'file','outputPropertyName':'data'}}}},4.2)
+code('Prepare image file',"""const item=$input.first();
+const config=$('Choose image').item.json;
+const file=item.binary?.data;
+const extensions={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'};
+const ext=extensions[file?.mimeType];
+if(!file||!ext)throw new Error('Downloaded cover is not a supported image; no upload performed');
+return [{json:config,binary:{data:{...file,fileName:'discogs-'+config.releaseId+'.'+ext}},pairedItem:{item:0}}];""")
+http('Upload image to NocoDB',{'method':'POST','url':"={{ $json.baseUrl + '/api/v2/storage/upload' }}",'sendBody':True,'contentType':'multipart-form-data','bodyParameters':{'parameters':[{'parameterType':'formBinaryData','name':'files','inputDataFieldName':'data'}]},'options':{'timeout':60000,'redirect':{'redirect':{'followRedirects':False}}}})
 code('Validate upload',"""const item=$('Choose image').item.json;
 const attachments=$input.all().flatMap(i=>Array.isArray(i.json)?i.json:[i.json]);
 if(!attachments.length||attachments.some(a=>typeof a!=='object'||!a.title||!(a.path||a.url||a.signedUrl)|| (a.size!=null && (!Number.isFinite(Number(a.size)) || Number(a.size)<=0 || Number(a.size)>8*1024*1024)) || (a.mimetype && !['image/jpeg','image/png','image/webp','image/gif'].includes(a.mimetype))))throw new Error('Unexpected upload response; record unchanged');
@@ -69,12 +77,12 @@ http('Attach cover',{'method':'PATCH','url':"={{ $json.baseUrl + '/api/v2/tables
 code('Updated result',"""const item=$('Protect existing cover').item.json;
 return [{json:{recordId:item.recordId,artist:item.artist,album:item.album,releaseId:item.releaseId,status:'updated'},pairedItem:{item:0}}];""")
 node('Completed','noOp',{})
-for a,b in [('Manual start','Configuration'),('Configuration','Validate configuration'),('Validate configuration','Read collection'),('Read collection','Select candidates'),('Select candidates','One record at a time'),('Pace Discogs requests','Discogs release'),('Discogs release','Choose image'),('Choose image','Has image'),('Preview result','One record at a time'),('Upload image to NocoDB','Validate upload'),('Validate upload','Recheck empty cover'),('Recheck empty cover','Protect existing cover'),('Protect existing cover','Still empty'),('Attach cover','Updated result'),('Updated result','One record at a time')]:link(a,b)
+for a,b in [('Manual start','Configuration'),('Configuration','Validate configuration'),('Validate configuration','Read collection'),('Read collection','Select candidates'),('Select candidates','One record at a time'),('Pace Discogs requests','Discogs release'),('Discogs release','Choose image'),('Choose image','Has image'),('Preview result','One record at a time'),('Download cover','Prepare image file'),('Prepare image file','Upload image to NocoDB'),('Upload image to NocoDB','Validate upload'),('Validate upload','Recheck empty cover'),('Recheck empty cover','Protect existing cover'),('Protect existing cover','Still empty'),('Attach cover','Updated result'),('Updated result','One record at a time')]:link(a,b)
 link('One record at a time','Completed',0);link('One record at a time','Pace Discogs requests',1)
 link('Has image','Preview only',0);link('Has image','One record at a time',1)
-link('Preview only','Preview result',0);link('Preview only','Upload image to NocoDB',1)
+link('Preview only','Preview result',0);link('Preview only','Download cover',1)
 link('Still empty','Attach cover',0);link('Still empty','One record at a time',1)
 # Lay out the long workflow in readable rows.
 for i,n in enumerate(nodes):n['position']=[(i%6)*260,(i//6)*300]
-workflow={'name':'VINYL — Discogs kapaklarını NocoDB’ye aktar v1.0.2','nodes':nodes,'connections':connections,'active':False,'settings':{'executionOrder':'v1','saveDataSuccessExecution':'none','saveDataErrorExecution':'none','saveManualExecutions':False},'pinData':{},'tags':[]}
-(root/'vinyl-discogs-covers-1.0.2.json').write_text(json.dumps(workflow,ensure_ascii=False,indent=2)+'\n')
+workflow={'name':'VINYL — Discogs kapaklarını NocoDB’ye aktar v1.0.3','nodes':nodes,'connections':connections,'active':False,'settings':{'executionOrder':'v1','saveDataSuccessExecution':'none','saveDataErrorExecution':'none','saveManualExecutions':False},'pinData':{},'tags':[]}
+(root/'vinyl-discogs-covers-1.0.3.json').write_text(json.dumps(workflow,ensure_ascii=False,indent=2)+'\n')

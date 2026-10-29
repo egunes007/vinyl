@@ -1,6 +1,6 @@
-# VINYL — Discogs kapaklarını NocoDB’ye aktarma (1.0.2)
+# VINYL — Discogs kapaklarını NocoDB’ye aktarma (1.0.3)
 
-İçe aktarılabilir dosya: [vinyl-discogs-covers-1.0.2.json](vinyl-discogs-covers-1.0.2.json).
+İçe aktarılabilir dosya: [vinyl-discogs-covers-1.0.3.json](vinyl-discogs-covers-1.0.3.json).
 Akış elle başlatılır, varsayılan olarak **önizlemedir** (`dryRun: true`) ve en fazla **5 kayıt** işler.
 `Cover_Image` boş ve `Discogs_ID` geçerli olan kayıtları seçer. Sanatçı/albüm adıyla otomatik eşleştirme yapmaz.
 Şemayı değiştirmez. Yazma modu açıldığında yalnızca seçilen kaydın `Cover_Image` alanını günceller.
@@ -36,9 +36,10 @@ Akış elle başlatılır, varsayılan olarak **önizlemedir** (`dryRun: true`) 
 - API v2 kayıtları 100’er alınır; 100 sayfa sınırında eksik tarama varsa akış yazmadan durur.
 - Her kayıt tek tek işlenir, Discogs istekleri arasında 2 saniye beklenir.
 - Discogs ana görseli, yoksa ilk görseli seçilir. Yalnız HTTPS `i.discogs.com` / `img.discogs.com` kabul edilir.
-- `POST /api/v2/storage/upload-by-url` ile NocoDB dosyayı indirir. Bu nedenle **NocoDB konteynerinin de**
-  Discogs görsel sunucusuna erişebilmesi gerekir. NocoDB dosyayı kendi attachment deposunda saklar;
-  `Cover_Image` alanına geçici Discogs URL’si doğrudan yazılmaz.
+- **Download cover** görseli n8n'de binary `data` alanına indirir; bu isteğe hiçbir API token'ı eklenmez.
+  **Prepare image file** MIME türünü kontrol edip dosyayı adlandırır. **Upload image to NocoDB**
+  `POST /api/v2/storage/upload` adresine multipart `files` alanıyla dosyayı yükler.
+  NocoDB'nin Discogs'a bağlanması gerekmez; n8n görsel sunucusuna erişebilmelidir.
 - Yüklemeden sonra kayıt tekrar okunur. Kapak dolmuşsa veya Discogs ID değişmişse PATCH yapılmaz.
   Bu bir veritabanı kilidi değildir; akışı paralel çalıştırmayın ve çalışırken aynı alanı elle düzenlemeyin.
 - Upload başarılı, recheck/PATCH başarısız olursa veya kayıt bu arada değişirse sahipsiz dosya kalabilir.
@@ -65,16 +66,16 @@ Düğümler HTTP Request 4.2, Code 2, Loop Over Items 3, If 2.2 ve Wait 1.1 sür
 `python3 automations/n8n/build-workflow.py` workflow JSON dosyasını yeniden üretir; n8n yalnız JSON’u içe aktarır.
 
 
-## 1.0.2 düzeltmesi
+## 1.0.3 düzeltmesi
 
 n8n Code sandbox'ında bulunmayan global `URL` bağımlılığı kaldırıldı. Hem Validate configuration
 hem Choose image düğümleri artık harici modül veya özel n8n ayarı gerektirmeyen sıkı adres
 kontrolleri kullanır. Testler de `URL` globali olmadan çalıştırılır. Önceki workflow'u durdurup
-1.0.2 JSON dosyasını yeni workflow olarak içe aktarın, credential seçimlerini yeniden yapın.
+1.0.3 JSON dosyasını yeni workflow olarak içe aktarın, credential seçimlerini yeniden yapın.
 `dryRun: true` ile başlatın; önizleme hâlâ varsayılandır.
 
 
-## 1.0.2 — sayfalama düzeltmesi
+## 1.0.3 — sayfalama düzeltmesi
 
 Read collection düğümündeki offset parametresinin türü n8n'in beklediği `qs` olarak düzeltildi.
 Önceki `query` değeri offset'i URL sorgusuna aktarmıyor, aynı sayfanın tekrar okunmasına neden oluyordu.
@@ -83,3 +84,14 @@ Type alanını **Query**, Name alanını `offset`, expression Value alanını `{
 Pagination Completed When **Other**, tamamlanma ifadesi
 `{{ $response.body.pageInfo?.isLastPage === true || $response.body.list.length < 100 }}` olmalıdır.
 Beş aynı yanıt korumasını kaldırmayın; sorun offset'in iletilmesiydi.
+
+
+## 1.0.3 — dosya olarak yükleme
+
+Canlı kurulumda upload-by-url uç noktası ERR_INTERNAL_SERVER döndürdü; kesin sunucu nedeni
+log olmadan belirlenemedi. Akış artık resmi multipart upload uç noktasını kullanır.
+Önceki akıştaki credential'ları yeni dosyada seçip Configuration içinde `dryRun: false`,
+`maxRecords: 1` ayarlayarak baştan çalıştırın. Başarıda `updated` sonucu beklenir.
+Yeni yöntem yerel yapı/Code testlerinden geçti; canlı multipart aktarım henüz doğrulanmadı.
+Yine 500 olursa Error details → From HTTP Request ayrıntısı ve NocoDB konteyner logu incelenmeli;
+logları paylaşırken token/credential değerlerini çıkartın.
