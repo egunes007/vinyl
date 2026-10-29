@@ -90,5 +90,6 @@ if(live) {
 }
 
 `;
+app += await readFile(new URL('scripts/wordpress-dashboard.js', root), 'utf8');
 await writeFile(new URL('assets/app.js',theme),app);
 console.log('WordPress tema bileşenleri güncellendi.');

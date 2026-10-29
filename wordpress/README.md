@@ -52,3 +52,31 @@ Tema **0.4.0** ve eklenti **1.1.0** paketlerini birlikte güncelleyin. Ardından
 ## NocoDB'ye yüklenen kapaklar
 
 Tema **0.5.0** ve eklenti **1.2.0**, mevcut `Cover_Image` ek dosya alanını destekler. Eklentide `manual-covers.php` dahil bütün dosyaları güncelleyin. Ardından NocoDB bağlantı testini çalıştırarak önbelleği yenileyin. Site önce manuel kapağı, yoksa Discogs'u, o da yoksa yer tutucuyu gösterir. Manuel kapakların görünmesi için Discogs bağlantısı gerekmez. NocoDB kayıtlarına yazma yapılmaz. Detaylar [eklenti yönergelerinde](vinyl-nocodb/README.txt). Test: `php tests/manual-covers.php`.
+
+
+## Dashboard ve ana sayfa — tema 0.6.0 / eklenti 1.3.0
+
+Ana sayfa tüm koleksiyonu listelemez. Pikap çizimi ve koyu/kırmızı tasarım korunur;
+12 gösterge, iki Top 10 sanatçı listesi ve yıl seçilebilir aylık alım tablosundan sonra
+Öne Çıkan LP’ler, Öne Çıkan Single’lar ve İmzalı Plaklar görünür. Her seçki sayfa açılışında
+kendi grubundan tekrarsız en fazla beş rastgele kayıt seçer. İmzalı seçki LP/Single seçkileriyle
+kesişebilir. Tam listeler mevcut `/koleksiyon/?format=lp`, `/koleksiyon/?format=single` ve
+`/imzali-plaklar/` adreslerinde açılır; ek WordPress sayfası gerekmez. İmzalı dashboard
+kartı imzalı tam listeye gider; albüm kartları mevcut detay penceresini açar.
+
+Top 10 listeleri kayıt adedine göre azalan, eşitlikte Türkçe alfabetik sıralanır.
+Sanatçı ülkeleri `Artist_Country`, format grupları doğrulanmış `Format` değerleri üzerinden hesaplanır.
+Alım tablosundaki Geçmiş seçilen yıldan önceki kayıtları kapsar; tekil alım tarihleri sunucudan çıkmaz.
+Ayrıntılar ve eksik tarih davranışı eklenti README dosyasındadır. Beş dakikalık veri önbelleği
+korunur; rastgele seçkiler her sayfa yüklemesinde yeniden seçilir. Tam sayfa önbelleği kullanılıyorsa
+ana sayfa JavaScript'inin çalışmasına izin verilmelidir.
+
+Kontroller: `npm test`, `node tests/live-theme.mjs`, `php tests/dashboard.php`,
+`php tests/discogs.php`, `php tests/manual-covers.php`. Paket üretimi:
+`node scripts/build-wordpress.mjs` ve `python3 scripts/package-wordpress.py`.
+Gerçek WordPress kurulumu ve canlı NocoDB/Discogs bağlantısı ayrıca test edilmelidir.
+
+
+Sürüm numaralı kurulum paketleri: [Tema 0.6.0](vinyl-archive-theme-0.6.0.zip) ve
+[NocoDB eklentisi 1.3.0](vinyl-nocodb-plugin-1.3.0.zip). Git sürüm etiketleri:
+`theme-v0.6.0` ve `plugin-v1.3.0`.

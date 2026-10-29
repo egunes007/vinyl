@@ -74,3 +74,19 @@ Ham attachment URL'leri ve imzalı sorgu parametreleri tarayıcıya aktarılmaz.
 JPEG, PNG, WebP, GIF kabul edilir; SVG/HTML kabul edilmez. Boyut sınırı 8 MB ve 40 megapikseldir. Görseller WordPress diskine kopyalanmaz, gerektiğinde yerel NocoDB'den alınır. Ön yüzden tembel yükleme kullanılır, tarayıcı 5 dakika önbellek tutabilir. Cover_Image değişiklikleri 5 dakikalık koleksiyon önbelleği yenilendiğinde görünür; panelde bağlantı testi önbelleği hemen yeniler. Albüm gizlenirse önceden tarayıcıya ulaşmış görseli geri çekmek mümkün değildir.
 
 Discogs devre dışı olsa veya internet DNS'i çalışmasa da, WordPress'in yerel NocoDB bağlantısı çalışıyorsa manuel kapaklar gösterilebilir. Dosya okunamazsa Discogs'a, o da yoksa yer tutucuya dönülür. PHP API taklitleri ile attachment ayrıştırma, hedef host sınırlaması, özel URL gizliliği, gerçek PNG doğrulaması ve gizli kayıtlar; DOM testleriyle kapak önceliği ve hata geri dönüşü doğrulandı. Canlı attachment denemesi kullanıcı sunucusunda yapılmalıdır.
+
+
+Dashboard — eklenti 1.3.0 / tema 0.6.0
+--------------------------------------
+İki ZIP paketini birlikte güncelleyin. İlk istek yeni önbellek anahtarıyla koleksiyonu tekrar okur.
+NocoDB Format değerleri LP, 2LP, Boxset, 10″, Single, 78 RPM ve Flex olarak ayrı sınıflanır.
+LP yalnızca tekli LP'dir; 2LP ve Boxset dahil her açık koleksiyon kaydı toplamda bir sayılır.
+Bilinmeyen formatlar toplamda sayılır, belirli bir format grubuna tahminle eklenmez.
+Sanatçı ülkesi Artist_Country alanından gelir; Pressing_Country ile karıştırılmaz.
+Boş sanatçı/ülke/türler ayrı bir değer olarak sayılmaz. Çoklu ülke ve türler ayrı sayılır.
+Purchase_Date sadece PHP içinde doğrulanır ve yıl/ay bazında toplamlara dönüştürülür.
+Tarayıcıya tekil alım tarihi, Notes, Price, token veya özel attachment adresi gönderilmez.
+ISO YYYY-MM-DD ve ISO zaman damgaları desteklenir. Eksik/geçersiz tarihler tabloda sayılmaz;
+adetleri ayrı notta gösterilir. Aylık Toplam tüm formatları içerir, dört format sütunuyla sınırlı değildir.
+Geçmiş seçilen yıldan önceki bütün tarihli açık kayıtları kapsar. Gizli/boş ve yinelenen API ID'leri sayılmaz.
+WordPress yerel önbelleği ve toplu dashboard verisi güncellenir; NocoDB'ye yazma veya şema değişikliği yapılmaz.

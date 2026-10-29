@@ -22,6 +22,8 @@ function va_nc_public_record($row, $fallback) {
         'year'=>va_nc_text($row['Release_Date'] ?? ''), 'pressingYear'=>va_nc_text($row['Pressing_Date'] ?? ''),
         'country'=>va_nc_text($row['Pressing_Country'] ?? ''), 'label'=>va_nc_text($row['Label'] ?? ''),
         'genre'=>va_nc_text($row['Genre'] ?? ''), 'style'=>va_nc_text($row['Style'] ?? ''),
+        'formatClass'=>va_nc_format($row['Format'] ?? ''),
+        'artistCountry'=>va_nc_text($row['Artist_Country'] ?? ''),
         'format'=>va_nc_text($row['Format'] ?? ''), 'signed'=>va_nc_signed($row['Notes'] ?? ''),
         'featured'=>va_nc_true($row['Featured'] ?? false),
         'discogsId'=>va_dc_id($row['Discogs_ID'] ?? '')
